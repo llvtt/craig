@@ -1,26 +1,67 @@
 package main
 
 import (
-	"encoding/xml"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"html"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
-	"github.com/gorilla/feeds"
+	"github.com/jmoiron/sqlx"
+	"github.com/mmcdole/gofeed"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
-type Results []*feeds.RssItem
+type Listing []*CraigslistItem
+
+type CraigslistItem struct {
+	Url          string    `db:"url"`
+	Title        string    `db:"title"`
+	Description  string    `db:"description"`
+	ThumbnailUrl string    `db:"thumbnail_url"`
+	IndexDate    time.Time `db:"index_date"`
+	PublishDate  time.Time `db:"publish_date"`
+}
+
+func extractThumbnail(item *gofeed.Item) string {
+	enclosureList := item.Extensions["enc"]["enclosure"]
+	if len(enclosureList) == 0 {
+		return ""
+	}
+	return enclosureList[0].Attrs["resource"]
+}
+
+func CraigslistItemFromRssItem(item *gofeed.Item) *CraigslistItem {
+	publishDate, err := time.Parse(time.RFC3339, item.Published)
+	if err != nil {
+		panic(err)
+	}
+	return &CraigslistItem{
+		Url:          item.Link,
+		Title:        html.UnescapeString(item.Title),
+		Description:  item.Description,
+		ThumbnailUrl: extractThumbnail(item),
+		IndexDate:    time.Now(),
+		PublishDate:  publishDate,
+	}
+}
 
 type Client struct {
 	region   string
 	category string
 	options  *SearchOptions
+	parser   *gofeed.Parser
+	db       *sqlx.DB
 }
 
 func NewClient(region string) *Client {
-	return &Client{region, "", &SearchOptions{}}
+	db, err := sqlx.Connect("sqlite3", "test.db")
+	if err != nil {
+		panic(err)
+	}
+	return &Client{region, "", &SearchOptions{}, gofeed.NewParser(), db}
 }
 
 type SearchOptions struct {
@@ -29,7 +70,7 @@ type SearchOptions struct {
 
 type params map[string]string
 
-func parameterString(p params) string {
+func (self *Client) parameterString(p params) string {
 	var paramParts []string
 	for name, value := range p {
 		paramParts = append(paramParts, fmt.Sprintf("%s=%s",
@@ -40,22 +81,9 @@ func parameterString(p params) string {
 	return fmt.Sprintf("?%s", strings.Join(paramParts, "&"))
 }
 
-func (self *Client) get(path string, p params) (feed feeds.RssFeedXml, err error) {
-	var (
-		resp *http.Response
-		body []byte
-	)
-	url := fmt.Sprintf("http://%s.craigslist.org%s%s", self.region, path, parameterString(p))
-	fmt.Println(url)
-	if resp, err = http.Get(url); err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	if body, err = ioutil.ReadAll(resp.Body); err != nil {
-		return
-	}
-	fmt.Printf("%s", body)
-	err = xml.Unmarshal(body, &feed)
+func (self *Client) get(path string, p params) (feed *gofeed.Feed, err error) {
+	url := fmt.Sprintf("http://%s.craigslist.org%s%s", self.region, path, self.parameterString(p))
+	feed, err = self.parser.ParseURL(url)
 	return
 }
 
@@ -69,19 +97,20 @@ func (self *Client) Options(options *SearchOptions) *Client {
 	return self
 }
 
-func (self *Client) Search(terms ...string) (Results, error) {
+func (self *Client) Search(searchTerm string) (results Listing) {
+	query := strings.Replace(searchTerm, " ", "+", -1)
 	path := fmt.Sprintf("/search/%s", self.category)
-	feed, err := self.get(path, params{"query": strings.Join(terms, "+")})
-	return feed.Channel.Items, err
-}
-
-func main() {
-	client := NewClient("sfbay")
-	results, err := client.Category("ata").Options(&SearchOptions{HasPicture: true}).Search("queen", "bed")
-	if err != nil {
-		panic(err)
+	resultsFound := 1
+	for startItem := 0; resultsFound > 0; startItem += resultsFound {
+		feed, err := self.get(path, params{"query": query, "s": strconv.Itoa(startItem)})
+		if err != nil {
+			panic(err)
+		}
+		for _, item := range feed.Items {
+			results = append(results, CraigslistItemFromRssItem(item))
+			startItem += 1
+		}
+		resultsFound = len(feed.Items)
 	}
-	for _, result := range results {
-		fmt.Sprintf("found result: %v\n", result.Title)
-	}
+	return
 }
