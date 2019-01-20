@@ -41,7 +41,7 @@ func CraigslistItemFromRssItem(item *gofeed.Item) *CraigslistItem {
 	return &CraigslistItem{
 		Url:          item.Link,
 		Title:        html.UnescapeString(item.Title),
-		Description:  item.Description,
+		Description:  html.UnescapeString(item.Description),
 		ThumbnailUrl: extractThumbnail(item),
 		IndexDate:    time.Now(),
 		PublishDate:  publishDate,

@@ -32,6 +32,7 @@ func main() {
 	}
 	config := parseConfig(os.Args[1])
 	c := NewClient("sfbay")
+	sc := SlackClient{config.SlackEndpoint}
 	c.InitTable()
 	for _, term := range config.SearchTerms {
 		results := c.Category("ata").Options(&SearchOptions{HasPicture: true}).Search(term)
@@ -42,7 +43,10 @@ func main() {
 			}
 		}
 		if len(newResults) > 0 {
-			c.NotifySlack(config.SlackEndpoint, term, newResults)
+			sc.SendString("Found %d new items matching *%s* on my list!", len(newResults), term)
+			for _, result := range newResults {
+				sc.SendItem(term, result)
+			}
 		}
 	}
 }

@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
-// See https://api.slack.com/docs/message-attachments
-const SLACK_MAX_ATTACHMENTS = 100
-
+// TODO: new idea for the format of craigslist slack messages:
+// * 1 slack message per item
+// * use attachments to include images for each item
 type SlackMessage struct {
 	Text        string        `json:"text"`
-	Attachments []*Attachment `json:"attachments"`
+	Attachments []*Attachment `json:"attachments,omitempty"`
 }
 
 type Attachment struct {
@@ -23,59 +24,55 @@ type Attachment struct {
 	Text      string `json:"text"`
 }
 
-func AttachmentFromCraiglistItem(item *CraigslistItem) *Attachment {
-	return &Attachment{
-		Title:     item.Title,
-		TitleLink: item.Url,
-		Fallback:  fmt.Sprintf("%s - %s", item.Title, item.Url),
-		ImageUrl:  item.ThumbnailUrl,
-		Text:      item.Description,
+type SlackClient struct {
+	endpoint string
+}
+
+func (self *SlackClient) sendSlackMessage(message *SlackMessage) {
+	payload, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
+	resp, err := http.Post(self.endpoint, "application/json", bytes.NewReader(payload))
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	responseBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	if resp.StatusCode >= 300 {
+		fmt.Printf("possible bad request, response was %s\n", string(responseBytes))
 	}
 }
 
-func (self *Client) messageAttachmentsFromItems(items []*CraigslistItem) []*Attachment {
-	attachments := make([]*Attachment, len(items))
-	for _, item := range items {
-		attachments = append(attachments, AttachmentFromCraiglistItem(item))
-	}
-	return attachments
+func messageTextForItem(item *CraigslistItem) string {
+	return fmt.Sprintf(
+		"*%s*\n*%s*\n%s",
+		item.Title,
+		item.Url,
+		item.Description)
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+func (self *SlackClient) SendString(format string, args ...interface{}) {
+	self.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
+func (self *SlackClient) SendItem(endpoint string, item *CraigslistItem) {
+	var attachments []*Attachment
+	for _, imageUrl := range item.GetImageUrls() {
+		attachments = append(
+			attachments,
+			&Attachment{
+				ImageUrl: imageUrl,
+				Fallback: imageUrl,
+			})
 	}
-	return b
-}
-
-func (self *Client) NotifySlack(endpoint, term string, items []*CraigslistItem) {
-	messagesToSend := max(len(items)/SLACK_MAX_ATTACHMENTS, 1)
-	for i := 0; i < messagesToSend; i++ {
-		itemsToSend := items[i*SLACK_MAX_ATTACHMENTS : min((i+1)*SLACK_MAX_ATTACHMENTS, len(items))]
-		attachments := self.messageAttachmentsFromItems(itemsToSend)
-		messageText := fmt.Sprintf("New results for *%s* found on my list!", term)
-		if i > 0 {
-			messageText = fmt.Sprintf("More results for *%s*", term)
-		}
-		message := &SlackMessage{
-			Text:        messageText,
-			Attachments: attachments,
-		}
-		payload, err := json.Marshal(message)
-		if err != nil {
-			panic(err)
-		}
-		resp, err := http.Post(endpoint, "application/json", bytes.NewReader(payload))
-		if err != nil {
-			panic(err)
-		}
-		resp.Body.Close()
-	}
+	fmt.Println("sending slack message for item " + item.Title)
+	self.sendSlackMessage(
+		&SlackMessage{
+			Text:        messageTextForItem(item),
+			Attachments: attachments})
 }
