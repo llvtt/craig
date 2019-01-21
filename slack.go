@@ -50,7 +50,7 @@ func (self *SlackClient) sendSlackMessage(message *SlackMessage) {
 
 func messageTextForItem(item *CraigslistItem) string {
 	return fmt.Sprintf(
-		"*%s*\n*%s*\n%s",
+		"*%s*\n%s\n%s",
 		item.Title,
 		item.Url,
 		item.Description)
