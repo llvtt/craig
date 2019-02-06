@@ -61,7 +61,9 @@ func NewClient(region string) *Client {
 	if err != nil {
 		panic(err)
 	}
-	return &Client{region, "", &SearchOptions{}, gofeed.NewParser(), db}
+	client := &Client{region, "", &SearchOptions{}, gofeed.NewParser(), db}
+	client.initTable()
+	return client
 }
 
 type SearchOptions struct {

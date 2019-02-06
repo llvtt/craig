@@ -4,7 +4,7 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
-func (self *Client) InitTable() {
+func (self *Client) initTable() {
 	createTableStmt := `
 create table if not exists items (
   url varchar primary key,

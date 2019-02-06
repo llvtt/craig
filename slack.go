@@ -8,9 +8,6 @@ import (
 	"net/http"
 )
 
-// TODO: new idea for the format of craigslist slack messages:
-// * 1 slack message per item
-// * use attachments to include images for each item
 type SlackMessage struct {
 	Text        string        `json:"text"`
 	Attachments []*Attachment `json:"attachments,omitempty"`
