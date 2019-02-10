@@ -57,7 +57,7 @@ func (self *SlackClient) SendString(format string, args ...interface{}) {
 	self.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
 
-func (self *SlackClient) SendItem(endpoint string, item *CraigslistItem) {
+func (self *SlackClient) SendItem(item *CraigslistItem) {
 	var attachments []*Attachment
 	for _, imageUrl := range item.GetImageUrls() {
 		attachments = append(

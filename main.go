@@ -44,7 +44,7 @@ func main() {
 		if len(newResults) > 0 {
 			sc.SendString("Found %d new items matching *%s* on my list!", len(newResults), term)
 			for _, result := range newResults {
-				sc.SendItem(term, result)
+				sc.SendItem(result)
 			}
 		}
 	}
