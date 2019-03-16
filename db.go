@@ -12,7 +12,10 @@ create table if not exists items (
   thumbnail_url varchar,
   index_date timestamp,
   publish_date timestamp
-)`
+);
+
+create unique index if not exists unique_title on items (title);
+`
 	if _, err := self.db.Exec(createTableStmt); err != nil {
 		panic(err)
 	}
@@ -25,10 +28,14 @@ insert into items (title, url, thumbnail_url, index_date, publish_date)
 values(:title, :url, :thumbnail_url, :index_date, :publish_date)
 `
 	_, err := self.db.NamedExec(insertStmt, item)
-	if err != nil && err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintPrimaryKey {
+	if sqliteErr, ok := err.(sqlite3.Error); !ok {
 		return false
-	} else if err != nil {
-		panic(err)
+	} else {
+		switch sqliteErr.ExtendedCode {
+		case sqlite3.ErrConstraintPrimaryKey:
+		case sqlite3.ErrConstraintUnique:
+			return false
+		}
 	}
 	return true
 }
