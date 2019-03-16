@@ -33,8 +33,9 @@ func main() {
 	config := parseConfig(os.Args[1])
 	c := NewClient("sfbay")
 	sc := SlackClient{config.SlackEndpoint}
+	options := &SearchOptions{HasPicture: true, SubRegion: "sfc"}
 	for _, term := range config.SearchTerms {
-		results := c.Category("ata").Options(&SearchOptions{HasPicture: true}).Search(term)
+		results := c.Category("ata").Options(options).Search(term)
 		var newResults Listing
 		for _, result := range results {
 			if c.Insert(result) {

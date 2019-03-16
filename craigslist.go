@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"html"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +22,13 @@ type CraigslistItem struct {
 	ThumbnailUrl string    `db:"thumbnail_url"`
 	IndexDate    time.Time `db:"index_date"`
 	PublishDate  time.Time `db:"publish_date"`
+}
+
+func prependSlash(urlPart string) string {
+	if urlPart == "" {
+		return urlPart
+	}
+	return "/" + urlPart
 }
 
 func extractThumbnail(item *gofeed.Item) string {
@@ -68,6 +74,7 @@ func NewClient(region string) *Client {
 
 type SearchOptions struct {
 	HasPicture bool
+	SubRegion  string
 }
 
 type params map[string]string
@@ -75,16 +82,26 @@ type params map[string]string
 func (self *Client) parameterString(p params) string {
 	var paramParts []string
 	for name, value := range p {
-		paramParts = append(paramParts, fmt.Sprintf("%s=%s",
-			url.QueryEscape(name),
-			url.QueryEscape(value)))
+		paramParts = append(paramParts, fmt.Sprintf("%s=%s", name, value))
 	}
 	paramParts = append(paramParts, "format=rss")
 	return fmt.Sprintf("?%s", strings.Join(paramParts, "&"))
 }
 
+func (self *Client) buildUrl(path string, p params) string {
+	return fmt.Sprintf(
+		"http://%s.craigslist.org%s%s%s%s",
+		self.region,
+		path,
+		prependSlash(self.options.SubRegion),
+		prependSlash(self.category),
+		prependSlash(self.parameterString(p)),
+	)
+}
+
 func (self *Client) get(path string, p params) (feed *gofeed.Feed, err error) {
-	url := fmt.Sprintf("http://%s.craigslist.org%s%s", self.region, path, self.parameterString(p))
+	url := fmt.Sprintf(self.buildUrl(path, p))
+	fmt.Println(url)
 	feed, err = self.parser.ParseURL(url)
 	return
 }
@@ -101,10 +118,9 @@ func (self *Client) Options(options *SearchOptions) *Client {
 
 func (self *Client) Search(searchTerm string) (results Listing) {
 	query := strings.Replace(searchTerm, " ", "+", -1)
-	path := fmt.Sprintf("/search/%s", self.category)
 	resultsFound := 1
 	for startItem := 0; resultsFound > 0; startItem += resultsFound {
-		feed, err := self.get(path, params{"query": query, "s": strconv.Itoa(startItem)})
+		feed, err := self.get("/search", params{"query": query, "s": strconv.Itoa(startItem)})
 		if err != nil {
 			panic(err)
 		}
