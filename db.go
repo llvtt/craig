@@ -36,6 +36,7 @@ values(:title, :url, :thumbnail_url, :index_date, :publish_date)
 	} else {
 		switch sqliteErr.ExtendedCode {
 		case sqlite3.ErrConstraintPrimaryKey:
+			fallthrough
 		case sqlite3.ErrConstraintUnique:
 			return false
 		}
