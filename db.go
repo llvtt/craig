@@ -28,8 +28,11 @@ insert into items (title, url, thumbnail_url, index_date, publish_date)
 values(:title, :url, :thumbnail_url, :index_date, :publish_date)
 `
 	_, err := self.db.NamedExec(insertStmt, item)
+	if err == nil {
+		return true
+	}
 	if sqliteErr, ok := err.(sqlite3.Error); !ok {
-		return false
+		panic(err)
 	} else {
 		switch sqliteErr.ExtendedCode {
 		case sqlite3.ErrConstraintPrimaryKey:
@@ -37,5 +40,5 @@ values(:title, :url, :thumbnail_url, :index_date, :publish_date)
 			return false
 		}
 	}
-	return true
+	panic(err)
 }
