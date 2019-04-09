@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 type SlackMessage struct {
@@ -72,4 +73,12 @@ func (self *SlackClient) SendItem(item *CraigslistItem) {
 		&SlackMessage{
 			Text:        messageTextForItem(item),
 			Attachments: attachments})
+}
+
+func NewSlackClient() *SlackClient {
+	endpoint := os.Getenv("CRAIG_SLACK_ENDPOINT")
+	if len(endpoint) == 0 {
+		panic("CRAIG_SLACK_ENDPOINT is empty!")
+	}
+	return &SlackClient{endpoint}
 }

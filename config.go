@@ -13,9 +13,8 @@ type CraigslistSearch struct {
 }
 
 type CraigslistConfig struct {
-	SlackEndpoint string             `json:"slackEndpoint"`
-	Region        string             `json:"region"`
-	Searches      []CraigslistSearch `json:"searches"`
+	Region   string             `json:"region"`
+	Searches []CraigslistSearch `json:"searches"`
 }
 
 func parseConfig(filename string) *CraigslistConfig {

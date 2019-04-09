@@ -2,17 +2,14 @@ package main
 
 import (
 	"fmt"
-	"os"
 )
 
+const CONFIG_FILE_NAME = "config.json"
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("%s: must specify config file\n", os.Args[0])
-		os.Exit(1)
-	}
-	config := parseConfig(os.Args[1])
+	config := parseConfig(CONFIG_FILE_NAME)
 	c := NewClient("sfbay")
-	sc := SlackClient{config.SlackEndpoint}
+	sc := NewSlackClient()
 
 	options := &SearchOptions{HasPicture: true, SubRegion: config.Region}
 	for _, search := range config.Searches {
