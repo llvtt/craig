@@ -73,19 +73,28 @@ func NewClient(region string) *Client {
 }
 
 type SearchOptions struct {
-	HasPicture bool
-	SubRegion  string
+	HasPicture    bool
+	SubRegion     string
+	Neighborhoods []int
 }
 
-type params map[string]string
+type param []string
+type params []param
 
 func (self *Client) parameterString(p params) string {
 	var paramParts []string
-	for name, value := range p {
-		paramParts = append(paramParts, fmt.Sprintf("%s=%s", name, value))
+	for _, param := range p {
+		paramParts = append(paramParts, fmt.Sprintf("%s=%s", param[0], param[1]))
 	}
 	paramParts = append(paramParts, "format=rss")
 	return fmt.Sprintf("?%s", strings.Join(paramParts, "&"))
+}
+
+func (self *Client) optionsToParams(p params) params {
+	for _, nh := range self.options.Neighborhoods {
+		p = append(p, param{"nh", strconv.Itoa(nh)})
+	}
+	return p
 }
 
 func (self *Client) buildUrl(path string, p params) string {
@@ -95,7 +104,7 @@ func (self *Client) buildUrl(path string, p params) string {
 		path,
 		prependSlash(self.options.SubRegion),
 		prependSlash(self.category),
-		prependSlash(self.parameterString(p)),
+		prependSlash(self.parameterString(self.optionsToParams(p))),
 	)
 }
 
@@ -120,7 +129,7 @@ func (self *Client) Search(searchTerm string) (results Listing) {
 	query := strings.Replace(searchTerm, " ", "+", -1)
 	resultsFound := 1
 	for startItem := 0; resultsFound > 0; startItem += resultsFound {
-		feed, err := self.get("/search", params{"query": query, "s": strconv.Itoa(startItem)})
+		feed, err := self.get("/search", params{param{"query", query}, param{"s", strconv.Itoa(startItem)}})
 		if err != nil {
 			panic(err)
 		}
