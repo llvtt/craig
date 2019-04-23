@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/mmcdole/gofeed"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -16,12 +15,12 @@ import (
 type Listing []*CraigslistItem
 
 type CraigslistItem struct {
-	Url          string    `db:"url"`
-	Title        string    `db:"title"`
-	Description  string    `db:"description"`
-	ThumbnailUrl string    `db:"thumbnail_url"`
-	IndexDate    time.Time `db:"index_date"`
-	PublishDate  time.Time `db:"publish_date"`
+	Url          string    `json:"url"`
+	Title        string    `json:"title"`
+	Description  string    `json:"description"`
+	ThumbnailUrl string    `json:"thumbnail_url"`
+	IndexDate    time.Time `json:"index_date"`
+	PublishDate  time.Time `json:"publish_date"`
 }
 
 func prependSlash(urlPart string) string {
@@ -59,16 +58,14 @@ type Client struct {
 	category string
 	options  *SearchOptions
 	parser   *gofeed.Parser
-	db       *sqlx.DB
+	byUrl    map[string]*CraigslistItem
+	byTitle  map[string]*CraigslistItem
 }
 
 func NewClient(region string) *Client {
-	db, err := sqlx.Connect("sqlite3", "test.db")
-	if err != nil {
-		panic(err)
-	}
-	client := &Client{region, "", &SearchOptions{}, gofeed.NewParser(), db}
-	client.initTable()
+	client := &Client{region, "", &SearchOptions{}, gofeed.NewParser(),
+		make(map[string]*CraigslistItem), make(map[string]*CraigslistItem)}
+	client.initDB()
 	return client
 }
 

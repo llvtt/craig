@@ -5,3 +5,4 @@ config.json
 go-craigslist.tgz
 deploy.sh
 lambda.sh
+database.json

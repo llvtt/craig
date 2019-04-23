@@ -1,45 +1,43 @@
 package main
 
 import (
-	sqlite3 "github.com/mattn/go-sqlite3"
+	"bufio"
+	"encoding/json"
+	"os"
 )
 
-func (self *Client) initTable() {
-	createTableStmt := `
-create table if not exists items (
-  url varchar primary key,
-  title varchar,
-  thumbnail_url varchar,
-  index_date timestamp,
-  publish_date timestamp
-);
-
-create unique index if not exists unique_title on items (title);
-`
-	if _, err := self.db.Exec(createTableStmt); err != nil {
-		panic(err)
+func (self *Client) initDB() {
+	file, _ := os.Open("database.json")
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		var record CraigslistItem
+		panicOnErr(json.Unmarshal(scanner.Bytes(), &record))
+		self.byUrl[record.Url] = &record
+		self.byTitle[record.Title] = &record
 	}
+}
+
+func (self *Client) flushDB() {
+	file, _ := os.Create("database.json")
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	for _, record := range self.byUrl {
+		bytes, _ := json.Marshal(&record)
+		panicOnErr(writer.Write(bytes))
+		panicOnErr(writer.WriteString("\n"))
+	}
+	writer.Flush()
 }
 
 // Insert inserts a new RSS Item into the database.
 func (self *Client) Insert(item *CraigslistItem) bool {
-	insertStmt := `
-insert into items (title, url, thumbnail_url, index_date, publish_date)
-values(:title, :url, :thumbnail_url, :index_date, :publish_date)
-`
-	_, err := self.db.NamedExec(insertStmt, item)
-	if err == nil {
-		return true
+	if _, ok := self.byUrl[item.Url]; ok {
+		return false
+	} else if _, ok := self.byTitle[item.Title]; ok {
+		return false
 	}
-	if sqliteErr, ok := err.(sqlite3.Error); !ok {
-		panic(err)
-	} else {
-		switch sqliteErr.ExtendedCode {
-		case sqlite3.ErrConstraintPrimaryKey:
-			fallthrough
-		case sqlite3.ErrConstraintUnique:
-			return false
-		}
-	}
-	panic(err)
+	self.byUrl[item.Url] = item
+	self.byTitle[item.Title] = item
+	return true
 }
