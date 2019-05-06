@@ -2,17 +2,41 @@
 
 A Craigslist Slack bot written in Go.
 
+## Buildling
+
+```sh
+go get .
+go build
+```
+
 ## Configuration
 
-`craig` takes a JSON config file as its first positional argument. The config file has this format:
+Craig uses environment variables and a configuration file.
+
+### Environment variables
+
+* `CRAIG_SLACK_ENDPOINT` - Slack endpoint to use for posting messages
+
+### Configuration file
+
+The configuration file must be called `config.json` and placed in the current
+working directory.
+
+Example configuration:
 
 ```json
 {
-  "slackEndpoint": "http://hooks.slack.com/incoming/webhook/url/here",
-  "searchTerms": [
-    "wardrobe",
-    "desk",
-    "mirror"
+  "region": "sfc",
+  "searches": [
+    {
+      "category": "zip",
+      "terms": [""],
+      "nh": [3]
+    },
+    {
+      "category": "ata",
+      "terms": ["lamp", "mirror", "queen bed"]
+    }
   ]
 }
 ```
