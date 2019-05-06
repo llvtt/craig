@@ -62,7 +62,7 @@ type Client struct {
 	byTitle  map[string]*CraigslistItem
 }
 
-func NewClient(region string) *Client {
+func NewCraigslistClient(region string) *Client {
 	client := &Client{region, "", &SearchOptions{}, gofeed.NewParser(),
 		make(map[string]*CraigslistItem), make(map[string]*CraigslistItem)}
 	client.initDB()
