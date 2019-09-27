@@ -36,4 +36,5 @@ func main() {
 	}
 
 	craigslistClient.flushDB()
+	startServer()
 }
