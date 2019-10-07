@@ -30,5 +30,4 @@ func search(conf *CraigConfig) {
 			}
 		}
 	}
-	dbClient.flushDB()
 }

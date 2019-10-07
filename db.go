@@ -8,8 +8,8 @@ import (
 )
 
 type DBClient interface {
-	initDB()
-	flushDB()
+	// Insert inserts a new RSS Item into the database.
+	// returns false if the item existed already in the database, otherwise return true
 	InsertSearchedItem(item *CraigslistItem) bool
 }
 
@@ -23,13 +23,15 @@ func NewDBClient(conf *CraigConfig) DBClient {
 	var client DBClient
 	switch conf.DBType {
 	case "json":
-		client = JsonDBClient{conf.DBFile, make(map[string]*CraigslistItem), make(map[string]*CraigslistItem)}
+		var jsonClient JsonDBClient
+		jsonClient = JsonDBClient{conf.DBFile, make(map[string]*CraigslistItem), make(map[string]*CraigslistItem)}
+		jsonClient.initDB()
+		client = jsonClient
 	case "":
 		log.Fatal("No db type specified. Must specify db_type in config file.")
 	default:
 		log.Fatal("Invalid db type: " + conf.DBType)
 	}
-	client.initDB()
 	return client
 }
 
@@ -57,7 +59,6 @@ func (self JsonDBClient) flushDB() {
 	writer.Flush()
 }
 
-// Insert inserts a new RSS Item into the database.
 func (self JsonDBClient) InsertSearchedItem(item *CraigslistItem) bool {
 	if _, ok := self.byUrl[item.Url]; ok {
 		return false
@@ -66,5 +67,6 @@ func (self JsonDBClient) InsertSearchedItem(item *CraigslistItem) bool {
 	}
 	self.byUrl[item.Url] = item
 	self.byTitle[item.Title] = item
+	self.flushDB()
 	return true
 }
