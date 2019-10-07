@@ -19,8 +19,8 @@ Craig uses environment variables and a configuration file.
 
 ### Configuration file
 
-The configuration file must be called `config.json` and placed in the current
-working directory.
+The configuration file must be specified via the --config-file flag when running craig (by default, craig will read a file called `config.json` in the current
+working directory).
 
 Example configuration:
 
