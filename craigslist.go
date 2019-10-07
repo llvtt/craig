@@ -53,7 +53,7 @@ func CraigslistItemFromRssItem(item *gofeed.Item) *CraigslistItem {
 	}
 }
 
-type Client struct {
+type CraigslistClient struct {
 	region   string
 	category string
 	options  *SearchOptions
@@ -62,10 +62,9 @@ type Client struct {
 	byTitle  map[string]*CraigslistItem
 }
 
-func NewCraigslistClient(region string) *Client {
-	client := &Client{region, "", &SearchOptions{}, gofeed.NewParser(),
+func NewCraigslistClient(region string) *CraigslistClient {
+	client := &CraigslistClient{region, "", &SearchOptions{}, gofeed.NewParser(),
 		make(map[string]*CraigslistItem), make(map[string]*CraigslistItem)}
-	client.initDB()
 	return client
 }
 
@@ -78,7 +77,7 @@ type SearchOptions struct {
 type param []string
 type params []param
 
-func (self *Client) parameterString(p params) string {
+func (self *CraigslistClient) parameterString(p params) string {
 	var paramParts []string
 	for _, param := range p {
 		paramParts = append(paramParts, fmt.Sprintf("%s=%s", param[0], param[1]))
@@ -87,14 +86,14 @@ func (self *Client) parameterString(p params) string {
 	return fmt.Sprintf("?%s", strings.Join(paramParts, "&"))
 }
 
-func (self *Client) optionsToParams(p params) params {
+func (self *CraigslistClient) optionsToParams(p params) params {
 	for _, nh := range self.options.Neighborhoods {
 		p = append(p, param{"nh", strconv.Itoa(nh)})
 	}
 	return p
 }
 
-func (self *Client) buildUrl(path string, p params) string {
+func (self *CraigslistClient) buildUrl(path string, p params) string {
 	return fmt.Sprintf(
 		"http://%s.craigslist.org%s%s%s%s",
 		self.region,
@@ -105,24 +104,24 @@ func (self *Client) buildUrl(path string, p params) string {
 	)
 }
 
-func (self *Client) get(path string, p params) (feed *gofeed.Feed, err error) {
+func (self *CraigslistClient) get(path string, p params) (feed *gofeed.Feed, err error) {
 	url := fmt.Sprintf(self.buildUrl(path, p))
 	fmt.Println(url)
 	feed, err = self.parser.ParseURL(url)
 	return
 }
 
-func (self *Client) Category(category string) *Client {
+func (self *CraigslistClient) Category(category string) *CraigslistClient {
 	self.category = category
 	return self
 }
 
-func (self *Client) Options(options *SearchOptions) *Client {
+func (self *CraigslistClient) Options(options *SearchOptions) *CraigslistClient {
 	self.options = options
 	return self
 }
 
-func (self *Client) Search(searchTerm string) (results Listing) {
+func (self *CraigslistClient) Search(searchTerm string) (results Listing) {
 	query := strings.Replace(searchTerm, " ", "+", -1)
 	resultsFound := 1
 	for startItem := 0; resultsFound > 0; startItem += resultsFound {

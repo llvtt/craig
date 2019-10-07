@@ -2,9 +2,10 @@ package main
 
 import "fmt"
 
-func search(conf *CraigslistConfig) {
+func search(conf *CraigConfig) {
 	craigslistClient := NewCraigslistClient("sfbay")
 	slackClient := NewSlackClient()
+	dbClient := NewDBClient(conf)
 
 	options := &SearchOptions{HasPicture: true, SubRegion: conf.Region}
 	for _, search := range conf.Searches {
@@ -13,7 +14,7 @@ func search(conf *CraigslistConfig) {
 		for _, term := range search.Terms {
 			var newResults Listing
 			for _, result := range categoryClient.Search(term) {
-				if craigslistClient.InsertSearchedItem(result) {
+				if dbClient.InsertSearchedItem(result) {
 					newResults = append(newResults, result)
 				}
 			}
@@ -29,5 +30,5 @@ func search(conf *CraigslistConfig) {
 			}
 		}
 	}
-	craigslistClient.flushDB()
+	dbClient.flushDB()
 }

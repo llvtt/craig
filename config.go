@@ -12,13 +12,15 @@ type CraigslistSearch struct {
 	Neighborhoods []int    `json:"nh"`
 }
 
-type CraigslistConfig struct {
+type CraigConfig struct {
 	Region   string             `json:"region"`
 	Searches []CraigslistSearch `json:"searches"`
+	DBType   string             `json:"db_type"`
+	DBFile   string             `json:"db_file"`
 }
 
-func parseConfig(filename string) *CraigslistConfig {
-	var config CraigslistConfig
+func parseConfig(filename string) *CraigConfig {
+	var config CraigConfig
 	if file, err := os.Open(filename); err != nil {
 		panic(err)
 	} else if contents, err := ioutil.ReadAll(file); err != nil {
