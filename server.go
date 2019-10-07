@@ -6,18 +6,23 @@ import (
 	"net/http"
 )
 
-func listSearchesHandler(w http.ResponseWriter, r *http.Request) {
-	config := parseConfig(CONFIG_FILE_NAME)
-	searches, _ := json.Marshal(config.Searches)
-	w.Write(searches)
+func getListSearchesHandler(conf *CraigslistConfig) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		searches, _ := json.Marshal(conf.Searches)
+		w.Write(searches)
+	}
 }
 
-func runSearchHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		methodNotFoundResponse(w)
-	}
+func getRunSearchHandler(conf *CraigslistConfig) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			methodNotFoundResponse(w)
+			return
+		}
 
-	search()
+		// todo respond with info about the search
+		search(conf)
+	}
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -28,14 +33,14 @@ func methodNotFoundResponse(w http.ResponseWriter) {
 	http.Error(w, "{\"status\":\"error\", \"message\":\"No such http route\"}", http.StatusNotFound)
 }
 
-func initEndpoints() {
-	http.HandleFunc("/searches", listSearchesHandler)
-	http.HandleFunc("/search", runSearchHandler)
+func initEndpoints(conf *CraigslistConfig) {
+	http.HandleFunc("/searches", getListSearchesHandler(conf))
+	http.HandleFunc("/search", getRunSearchHandler(conf))
 	http.HandleFunc("/health", healthHandler)
 }
 
-func startServer() {
+func startServer(conf *CraigslistConfig) {
 	log.Print("Starting server...")
-	initEndpoints()
+	initEndpoints(conf)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

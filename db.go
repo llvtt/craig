@@ -31,7 +31,7 @@ func (self *Client) flushDB() {
 }
 
 // Insert inserts a new RSS Item into the database.
-func (self *Client) Insert(item *CraigslistItem) bool {
+func (self *Client) InsertSearchedItem(item *CraigslistItem) bool {
 	if _, ok := self.byUrl[item.Url]; ok {
 		return false
 	} else if _, ok := self.byTitle[item.Title]; ok {
