@@ -9,22 +9,46 @@ import (
 	"github.com/llvtt/craig/utils"
 )
 
-func Search(conf *types.CraigConfig, logger log.Logger) error {
+type Searcher interface {
+	Search() error
+}
+
+type searcher struct {
+	conf *types.CraigConfig
+	craigslistClient *craigslist.CraigslistClient
+	slackClient      *slack.SlackClient
+	dbClient         DBClient
+	logger           log.Logger
+}
+
+func NewSearcher(conf *types.CraigConfig, logger log.Logger) (Searcher, error) {
 	craigslistClient := craigslist.NewCraigslistClient("sfbay", logger)
 	slackClient := slack.NewSlackClient(logger)
 	dbClient, err := NewDBClient(conf, logger)
 	if err != nil {
-		return utils.WrapError("could not perform search", err)
+		return nil, utils.WrapError("could not initialize searcher", err)
 	}
 
-	options := &craigslist.SearchOptions{HasPicture: true, SubRegion: conf.Region}
-	for _, search := range conf.Searches {
+	return &searcher{
+		conf: conf,
+		craigslistClient: craigslistClient,
+		slackClient: slackClient,
+		dbClient: dbClient,
+		logger: logger,
+	}, nil
+
+}
+
+
+func (s *searcher) Search() error {
+	options := &craigslist.SearchOptions{HasPicture: true, SubRegion: s.conf.Region}
+	for _, search := range s.conf.Searches {
 		options.Neighborhoods = search.Neighborhoods
-		categoryClient := craigslistClient.Category(search.Category).Options(options)
+		categoryClient := s.craigslistClient.Category(search.Category).Options(options)
 		for _, term := range search.Terms {
 			var newResults craigslist.Listing
 			for _, result := range categoryClient.Search(term) {
-				inserted, err := dbClient.InsertSearchedItem(result)
+				inserted, err := s.dbClient.InsertSearchedItem(result)
 				if err != nil {
 					return utils.WrapError("could not insert searched item", err)
 				}
@@ -37,9 +61,9 @@ func Search(conf *types.CraigConfig, logger log.Logger) error {
 				if len(term) > 0 {
 					announcement = fmt.Sprintf("Found %d new items matching *%s* on my list!", len(newResults), term)
 				}
-				slackClient.SendString(announcement)
+				s.slackClient.SendString(announcement)
 				for _, result := range newResults {
-					slackClient.SendItem(result)
+					s.slackClient.SendItem(result)
 				}
 			}
 		}

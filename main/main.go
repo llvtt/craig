@@ -9,6 +9,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/llvtt/craig/server"
 	"github.com/llvtt/craig/types"
+	"github.com/llvtt/craig/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -40,7 +41,10 @@ func main() {
 
 
 	ctx := context.Background()
-	svc := server.NewService(config, logger)
+	svc, err := server.NewService(config, logger)
+	if err != nil {
+		panic(utils.WrapError("Could not start craig!", err).Error())
+	}
 
 	errChan := make(chan error)
 	go func() {

@@ -16,5 +16,5 @@ func makeError(msg string) error {
 }
 
 func WrapError(msg string, err error) error {
-	return errors.New(msg + " -- Caused by: "+err.Error())
+	return errors.New(msg + " --> Caused by: "+err.Error())
 }
