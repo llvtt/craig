@@ -1,4 +1,4 @@
-package main
+package craig
 
 import (
 	"bufio"
@@ -54,7 +54,7 @@ func imageUrls(reader io.Reader) (urls []string) {
 	return
 }
 
-func (ci *CraigslistItem) GetImageUrls() (urls []string) {
+func GetImageUrls(ci *types.CraigslistItem) (urls []string) {
 	resp, err := http.Get(ci.Url)
 	if err != nil {
 		panic(err)

@@ -1,7 +1,8 @@
-package main
+package craig
 
 import (
 	"fmt"
+	"github.com/llvtt/craig/types"
 	"html"
 	"strconv"
 	"strings"
@@ -12,16 +13,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type Listing []*CraigslistItem
-
-type CraigslistItem struct {
-	Url          string    `json:"url"`
-	Title        string    `json:"title"`
-	Description  string    `json:"description"`
-	ThumbnailUrl string    `json:"thumbnail_url"`
-	IndexDate    time.Time `json:"index_date"`
-	PublishDate  time.Time `json:"publish_date"`
-}
+type Listing []*types.CraigslistItem
 
 func prependSlash(urlPart string) string {
 	if urlPart == "" {
@@ -38,12 +30,12 @@ func extractThumbnail(item *gofeed.Item) string {
 	return enclosureList[0].Attrs["resource"]
 }
 
-func CraigslistItemFromRssItem(item *gofeed.Item) *CraigslistItem {
+func CraigslistItemFromRssItem(item *gofeed.Item) *types.CraigslistItem {
 	publishDate, err := time.Parse(time.RFC3339, item.Published)
 	if err != nil {
 		panic(err)
 	}
-	return &CraigslistItem{
+	return &types.CraigslistItem{
 		Url:          item.Link,
 		Title:        html.UnescapeString(item.Title),
 		Description:  html.UnescapeString(item.Description),
@@ -58,13 +50,13 @@ type CraigslistClient struct {
 	category string
 	options  *SearchOptions
 	parser   *gofeed.Parser
-	byUrl    map[string]*CraigslistItem
-	byTitle  map[string]*CraigslistItem
+	byUrl    map[string]*types.CraigslistItem
+	byTitle  map[string]*types.CraigslistItem
 }
 
 func NewCraigslistClient(region string) *CraigslistClient {
 	client := &CraigslistClient{region, "", &SearchOptions{}, gofeed.NewParser(),
-		make(map[string]*CraigslistItem), make(map[string]*CraigslistItem)}
+		make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem)}
 	return client
 }
 

@@ -1,9 +1,10 @@
-package main
+package types
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
 type CraigslistSearch struct {
@@ -19,7 +20,16 @@ type CraigConfig struct {
 	DBFile   string             `json:"db_file"`
 }
 
-func parseConfig(filename string) *CraigConfig {
+type CraigslistItem struct {
+	Url          string    `json:"url"`
+	Title        string    `json:"title"`
+	Description  string    `json:"description"`
+	ThumbnailUrl string    `json:"thumbnail_url"`
+	IndexDate    time.Time `json:"index_date"`
+	PublishDate  time.Time `json:"publish_date"`
+}
+
+func ParseConfig(filename string) *CraigConfig {
 	var config CraigConfig
 	if file, err := os.Open(filename); err != nil {
 		panic(err)

@@ -1,10 +1,14 @@
-package main
+package craig
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/llvtt/craig/slack"
+	"github.com/llvtt/craig/types"
+)
 
-func search(conf *CraigConfig) {
+func Search(conf *types.CraigConfig) {
 	craigslistClient := NewCraigslistClient("sfbay")
-	slackClient := NewSlackClient()
+	slackClient := slack.NewSlackClient()
 	dbClient := NewDBClient(conf)
 
 	options := &SearchOptions{HasPicture: true, SubRegion: conf.Region}

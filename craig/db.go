@@ -1,8 +1,10 @@
-package main
+package craig
 
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/llvtt/craig/types"
+	"github.com/llvtt/craig/utils"
 	"log"
 	"os"
 )
@@ -10,21 +12,21 @@ import (
 type DBClient interface {
 	// Insert inserts a new RSS Item into the database.
 	// returns false if the item existed already in the database, otherwise return true
-	InsertSearchedItem(item *CraigslistItem) bool
+	InsertSearchedItem(item *types.CraigslistItem) bool
 }
 
 type JsonDBClient struct {
 	dbFile  string
-	byUrl   map[string]*CraigslistItem
-	byTitle map[string]*CraigslistItem
+	byUrl   map[string]*types.CraigslistItem
+	byTitle map[string]*types.CraigslistItem
 }
 
-func NewDBClient(conf *CraigConfig) DBClient {
+func NewDBClient(conf *types.CraigConfig) DBClient {
 	var client DBClient
 	switch conf.DBType {
 	case "json":
 		var jsonClient JsonDBClient
-		jsonClient = JsonDBClient{conf.DBFile, make(map[string]*CraigslistItem), make(map[string]*CraigslistItem)}
+		jsonClient = JsonDBClient{conf.DBFile, make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem)}
 		jsonClient.initDB()
 		client = jsonClient
 	case "":
@@ -40,8 +42,8 @@ func (self JsonDBClient) initDB() {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		var record CraigslistItem
-		panicOnErr(json.Unmarshal(scanner.Bytes(), &record))
+		var record types.CraigslistItem
+		utils.PanicOnErr(json.Unmarshal(scanner.Bytes(), &record))
 		self.byUrl[record.Url] = &record
 		self.byTitle[record.Title] = &record
 	}
@@ -53,13 +55,13 @@ func (self JsonDBClient) flushDB() {
 	writer := bufio.NewWriter(file)
 	for _, record := range self.byUrl {
 		bytes, _ := json.Marshal(&record)
-		panicOnErr(writer.Write(bytes))
-		panicOnErr(writer.WriteString("\n"))
+		utils.PanicOnErr(writer.Write(bytes))
+		utils.PanicOnErr(writer.WriteString("\n"))
 	}
 	writer.Flush()
 }
 
-func (self JsonDBClient) InsertSearchedItem(item *CraigslistItem) bool {
+func (self JsonDBClient) InsertSearchedItem(item *types.CraigslistItem) bool {
 	if _, ok := self.byUrl[item.Url]; ok {
 		return false
 	} else if _, ok := self.byTitle[item.Title]; ok {

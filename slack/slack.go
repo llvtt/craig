@@ -1,9 +1,11 @@
-package main
+package slack
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/llvtt/craig/craig"
+	"github.com/llvtt/craig/types"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -46,7 +48,7 @@ func (self *SlackClient) sendSlackMessage(message *SlackMessage) {
 	}
 }
 
-func messageTextForItem(item *CraigslistItem) string {
+func messageTextForItem(item *types.CraigslistItem) string {
 	return fmt.Sprintf(
 		"*%s*\n%s\n%s",
 		item.Title,
@@ -58,9 +60,9 @@ func (self *SlackClient) SendString(format string, args ...interface{}) {
 	self.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
 
-func (self *SlackClient) SendItem(item *CraigslistItem) {
+func (self *SlackClient) SendItem(item *types.CraigslistItem) {
 	var attachments []*Attachment
-	for _, imageUrl := range item.GetImageUrls() {
+	for _, imageUrl := range craig.GetImageUrls(item) {
 		attachments = append(
 			attachments,
 			&Attachment{

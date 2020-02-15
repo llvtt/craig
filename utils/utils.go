@@ -1,6 +1,6 @@
-package main
+package utils
 
-func panicOnErr(args ...interface{}) {
+func PanicOnErr(args ...interface{}) {
 	if len(args) < 1 {
 		return
 	}
