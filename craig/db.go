@@ -3,72 +3,103 @@ package craig
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	log "github.com/go-kit/kit/log"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
-	"log"
 	"os"
 )
 
 type DBClient interface {
 	// Insert inserts a new RSS Item into the database.
 	// returns false if the item existed already in the database, otherwise return true
-	InsertSearchedItem(item *types.CraigslistItem) bool
+	InsertSearchedItem(item *types.CraigslistItem) (bool, error)
 }
 
 type JsonDBClient struct {
 	dbFile  string
 	byUrl   map[string]*types.CraigslistItem
 	byTitle map[string]*types.CraigslistItem
+	logger log.Logger
 }
 
-func NewDBClient(conf *types.CraigConfig) DBClient {
+func NewDBClient(conf *types.CraigConfig, logger log.Logger) (DBClient, error) {
 	var client DBClient
 	switch conf.DBType {
 	case "json":
 		var jsonClient JsonDBClient
-		jsonClient = JsonDBClient{conf.DBFile, make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem)}
-		jsonClient.initDB()
+		jsonClient = JsonDBClient{conf.DBFile, make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem), logger}
+		err := jsonClient.initDB()
+		if err != nil {
+			return nil, err
+		}
 		client = jsonClient
 	case "":
-		log.Fatal("No db type specified. Must specify db_type in config file.")
+		return nil, errors.New("no db type specified. must specify db_type in config file")
 	default:
-		log.Fatal("Invalid db type: " + conf.DBType)
+		return nil, errors.New("invalid db type: " + conf.DBType)
 	}
-	return client
+	return client, nil
 }
 
-func (self JsonDBClient) initDB() {
-	file, _ := os.Open(self.dbFile)
+func (c JsonDBClient) initDB() error {
+	file, err := os.Open(c.dbFile)
+	if err != nil {
+		return utils.WrapError("could not open db file", err)
+	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		var record types.CraigslistItem
-		utils.PanicOnErr(json.Unmarshal(scanner.Bytes(), &record))
-		self.byUrl[record.Url] = &record
-		self.byTitle[record.Title] = &record
+		err := json.Unmarshal(scanner.Bytes(), &record)
+		if err != nil {
+			return utils.WrapError("could not deserialize record in db", err)
+		}
+		c.byUrl[record.Url] = &record
+		c.byTitle[record.Title] = &record
 	}
+	return nil
 }
 
-func (self JsonDBClient) flushDB() {
-	file, _ := os.Create(self.dbFile)
+func (c JsonDBClient) flushDB() error {
+	file, err := os.Create(c.dbFile)
+	if err != nil {
+		return utils.WrapError("could not create db file", err)
+	}
 	defer file.Close()
 	writer := bufio.NewWriter(file)
-	for _, record := range self.byUrl {
-		bytes, _ := json.Marshal(&record)
-		utils.PanicOnErr(writer.Write(bytes))
-		utils.PanicOnErr(writer.WriteString("\n"))
+	for _, record := range c.byUrl {
+		bytes, err := json.Marshal(&record)
+		if err != nil {
+			return utils.WrapError("could not json serialize record", err)
+		}
+		_, err = writer.Write(bytes)
+		if err != nil {
+			return utils.WrapError("could not write to db", err)
+		}
+		_, err = writer.WriteString("\n")
+		if err != nil {
+			return utils.WrapError("could not write to db", err)
+		}
 	}
-	writer.Flush()
+	err = writer.Flush()
+	if err != nil {
+		return utils.WrapError("could not flush to db", err)
+	}
+	return nil
 }
 
-func (self JsonDBClient) InsertSearchedItem(item *types.CraigslistItem) bool {
-	if _, ok := self.byUrl[item.Url]; ok {
-		return false
-	} else if _, ok := self.byTitle[item.Title]; ok {
-		return false
+func (c JsonDBClient) InsertSearchedItem(item *types.CraigslistItem) (bool, error) {
+	if _, ok := c.byUrl[item.Url]; ok {
+		return false, nil
+	} else if _, ok := c.byTitle[item.Title]; ok {
+		return false, nil
 	}
-	self.byUrl[item.Url] = item
-	self.byTitle[item.Title] = item
-	self.flushDB()
-	return true
+	c.byUrl[item.Url] = item
+	c.byTitle[item.Title] = item
+	err := c.flushDB()
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

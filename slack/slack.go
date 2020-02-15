@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/go-kit/kit/log"
 	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/types"
 	"io/ioutil"
@@ -77,7 +78,7 @@ func (self *SlackClient) SendItem(item *types.CraigslistItem) {
 			Attachments: attachments})
 }
 
-func NewSlackClient() *SlackClient {
+func NewSlackClient(log.Logger) *SlackClient {
 	endpoint := os.Getenv("CRAIG_SLACK_ENDPOINT")
 	if len(endpoint) == 0 {
 		panic("CRAIG_SLACK_ENDPOINT is empty!")

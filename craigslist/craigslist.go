@@ -2,6 +2,7 @@ package craigslist
 
 import (
 	"fmt"
+	"github.com/go-kit/kit/log"
 	"github.com/llvtt/craig/types"
 	"html"
 	"strconv"
@@ -54,7 +55,7 @@ type CraigslistClient struct {
 	byTitle  map[string]*types.CraigslistItem
 }
 
-func NewCraigslistClient(region string) *CraigslistClient {
+func NewCraigslistClient(region string, logger log.Logger) *CraigslistClient {
 	client := &CraigslistClient{region, "", &SearchOptions{}, gofeed.NewParser(),
 		make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem)}
 	return client

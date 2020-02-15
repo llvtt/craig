@@ -25,7 +25,7 @@ func NewService(config *types.CraigConfig, logger log.Logger) *service {
 
 func (s *service) Search(ctx context.Context) error {
 	level.Info(s.logger).Log("msg", "Called method: Search")
-	return craig.Search(s.config)
+	return craig.Search(s.config, s.logger)
 }
 
 func (s *service) ListSearches(ctx context.Context) (*[]types.CraigslistSearch, error) {
