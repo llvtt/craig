@@ -3,10 +3,13 @@ package slack
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/types"
+	"github.com/llvtt/craig/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -27,14 +30,24 @@ type Attachment struct {
 
 type SlackClient struct {
 	endpoint string
+	imageScraper craigslist.ImageScraper
+	logger log.Logger
 }
 
-func (self *SlackClient) sendSlackMessage(message *SlackMessage) {
+func NewSlackClient(logger log.Logger) (*SlackClient, error) {
+	endpoint := os.Getenv("CRAIG_SLACK_ENDPOINT")
+	if len(endpoint) == 0 {
+		return nil, errors.New("CRAIG_SLACK_ENDPOINT is empty!")
+	}
+	return &SlackClient{endpoint, craigslist.NewImageScraper(logger), logger}, nil
+}
+
+func (c *SlackClient) sendSlackMessage(message *SlackMessage) {
 	payload, err := json.Marshal(message)
 	if err != nil {
 		panic(err)
 	}
-	resp, err := http.Post(self.endpoint, "application/json", bytes.NewReader(payload))
+	resp, err := http.Post(c.endpoint, "application/json", bytes.NewReader(payload))
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +58,7 @@ func (self *SlackClient) sendSlackMessage(message *SlackMessage) {
 		panic(err)
 	}
 	if resp.StatusCode >= 300 {
-		fmt.Printf("possible bad request, response was %s\n", string(responseBytes))
+		level.Warn(c.logger).Log("msg", fmt.Sprintf("possible bad request, response was %s\n", string(responseBytes)))
 	}
 }
 
@@ -57,13 +70,17 @@ func messageTextForItem(item *types.CraigslistItem) string {
 		item.Description)
 }
 
-func (self *SlackClient) SendString(format string, args ...interface{}) {
-	self.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
+func (c *SlackClient) SendString(format string, args ...interface{}) {
+	c.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
 
-func (self *SlackClient) SendItem(item *types.CraigslistItem) {
+func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
 	var attachments []*Attachment
-	for _, imageUrl := range craigslist.GetImageUrls(item) {
+	urls, err := c.imageScraper.GetImageUrls(item)
+	if err != nil {
+		return utils.WrapError("Could not send item to craigslist", err)
+	}
+	for _, imageUrl := range urls {
 		attachments = append(
 			attachments,
 			&Attachment{
@@ -71,17 +88,11 @@ func (self *SlackClient) SendItem(item *types.CraigslistItem) {
 				Fallback: imageUrl,
 			})
 	}
-	fmt.Println("sending slack message for item " + item.Title)
-	self.sendSlackMessage(
+	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
+	c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForItem(item),
 			Attachments: attachments})
+	return nil
 }
 
-func NewSlackClient(log.Logger) *SlackClient {
-	endpoint := os.Getenv("CRAIG_SLACK_ENDPOINT")
-	if len(endpoint) == 0 {
-		panic("CRAIG_SLACK_ENDPOINT is empty!")
-	}
-	return &SlackClient{endpoint}
-}

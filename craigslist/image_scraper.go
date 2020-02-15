@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/llvtt/craig/types"
+	"github.com/llvtt/craig/utils"
 	"io"
 	"net/http"
 	"strings"
@@ -12,14 +15,28 @@ import (
 
 const IMAGE_HOST = "https://images.craigslist.org"
 
+type ImageScraper interface {
+	GetImageUrls(ci *types.CraigslistItem) (urls []string, err error)
+}
+
+type imageScraper struct {
+	logger log.Logger
+}
+
 type ImageDesc struct {
 	ImgId string `json:"imgid"`
 }
 
-func imageIds(imgListDecl string) (ids []string) {
+func NewImageScraper(logger log.Logger) ImageScraper {
+	return &imageScraper{
+		logger: logger,
+	}
+}
+
+func (s *imageScraper) imageIds(imgListDecl string) (ids []string) {
 	parts := strings.Split(imgListDecl, " = ")
 	if len(parts) != 2 {
-		fmt.Println("warning: could not parse imgListDecl: " + imgListDecl)
+		level.Warn(s.logger).Log("msg", "could not parse imgListDecl: " + imgListDecl)
 		return
 	}
 	value := strings.Trim(parts[1], "; ")
@@ -31,7 +48,7 @@ func imageIds(imgListDecl string) (ids []string) {
 		// Remove stuff before the first colon
 		parts := strings.SplitN(desc.ImgId, ":", 2)
 		if len(parts) != 2 {
-			fmt.Println("warning: could not parse ids in imgListDecl: " + imgListDecl)
+			level.Warn(s.logger).Log("msg", "could not parse ids in imgListDecl: " + imgListDecl)
 			return
 		}
 		ids = append(ids, parts[1])
@@ -39,12 +56,12 @@ func imageIds(imgListDecl string) (ids []string) {
 	return
 }
 
-func imageUrls(reader io.Reader) (urls []string) {
+func (s *imageScraper) imageUrls(reader io.Reader) (urls []string) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, "var imgList =") {
-			ids := imageIds(line)
+			ids := s.imageIds(line)
 			for _, id := range ids {
 				url := fmt.Sprintf("%s/%s_1200x900.jpg", IMAGE_HOST, id)
 				urls = append(urls, url)
@@ -55,15 +72,15 @@ func imageUrls(reader io.Reader) (urls []string) {
 	return
 }
 
-func GetImageUrls(ci *types.CraigslistItem) (urls []string) {
+func (s *imageScraper) GetImageUrls(ci *types.CraigslistItem) ([]string, error) {
 	resp, err := http.Get(ci.Url)
 	if err != nil {
-		panic(err)
+		return nil, utils.WrapError("could not get image from url: "+ci.Url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		return
+		return nil, nil
 	}
-	urls = imageUrls(resp.Body)
-	return
+	urls := s.imageUrls(resp.Body)
+	return urls, nil
 }

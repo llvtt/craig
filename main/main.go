@@ -63,10 +63,6 @@ func main() {
 		errChan <- http.ListenAndServe(*httpAddr, handler)
 	}()
 
-	//log.Printf("Config file path is: %v", *configFilePath)
-	//craig.StartServer(craig.ParseConfig(*configFilePath))
-
-
 	//server.NewHTTPServer()
 	level.Error(logger).Log(<-errChan)
 }

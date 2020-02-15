@@ -23,7 +23,10 @@ type searcher struct {
 
 func NewSearcher(conf *types.CraigConfig, logger log.Logger) (Searcher, error) {
 	craigslistClient := craigslist.NewCraigslistClient("sfbay", logger)
-	slackClient := slack.NewSlackClient(logger)
+	slackClient, err := slack.NewSlackClient(logger)
+	if err != nil {
+		return nil, utils.WrapError("could not initialize slack client", err)
+	}
 	dbClient, err := NewDBClient(conf, logger)
 	if err != nil {
 		return nil, utils.WrapError("could not initialize searcher", err)

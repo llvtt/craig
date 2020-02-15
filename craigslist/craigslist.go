@@ -3,6 +3,7 @@ package craigslist
 import (
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/llvtt/craig/types"
 	"html"
 	"strconv"
@@ -53,11 +54,12 @@ type CraigslistClient struct {
 	parser   *gofeed.Parser
 	byUrl    map[string]*types.CraigslistItem
 	byTitle  map[string]*types.CraigslistItem
+	logger   log.Logger
 }
 
 func NewCraigslistClient(region string, logger log.Logger) *CraigslistClient {
 	client := &CraigslistClient{region, "", &SearchOptions{}, gofeed.NewParser(),
-		make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem)}
+		make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem), logger}
 	return client
 }
 
@@ -70,7 +72,7 @@ type SearchOptions struct {
 type param []string
 type params []param
 
-func (self *CraigslistClient) parameterString(p params) string {
+func (c *CraigslistClient) parameterString(p params) string {
 	var paramParts []string
 	for _, param := range p {
 		paramParts = append(paramParts, fmt.Sprintf("%s=%s", param[0], param[1]))
@@ -79,46 +81,46 @@ func (self *CraigslistClient) parameterString(p params) string {
 	return fmt.Sprintf("?%s", strings.Join(paramParts, "&"))
 }
 
-func (self *CraigslistClient) optionsToParams(p params) params {
-	for _, nh := range self.options.Neighborhoods {
+func (c *CraigslistClient) optionsToParams(p params) params {
+	for _, nh := range c.options.Neighborhoods {
 		p = append(p, param{"nh", strconv.Itoa(nh)})
 	}
 	return p
 }
 
-func (self *CraigslistClient) buildUrl(path string, p params) string {
+func (c *CraigslistClient) buildUrl(path string, p params) string {
 	return fmt.Sprintf(
 		"http://%s.craigslist.org%s%s%s%s",
-		self.region,
+		c.region,
 		path,
-		prependSlash(self.options.SubRegion),
-		prependSlash(self.category),
-		prependSlash(self.parameterString(self.optionsToParams(p))),
+		prependSlash(c.options.SubRegion),
+		prependSlash(c.category),
+		prependSlash(c.parameterString(c.optionsToParams(p))),
 	)
 }
 
-func (self *CraigslistClient) get(path string, p params) (feed *gofeed.Feed, err error) {
-	url := fmt.Sprintf(self.buildUrl(path, p))
-	fmt.Println(url)
-	feed, err = self.parser.ParseURL(url)
+func (c *CraigslistClient) get(path string, p params) (feed *gofeed.Feed, err error) {
+	url := fmt.Sprintf(c.buildUrl(path, p))
+	level.Info(c.logger).Log("msg", "Getting url: "+url)
+	feed, err = c.parser.ParseURL(url)
 	return
 }
 
-func (self *CraigslistClient) Category(category string) *CraigslistClient {
-	self.category = category
-	return self
+func (c *CraigslistClient) Category(category string) *CraigslistClient {
+	c.category = category
+	return c
 }
 
-func (self *CraigslistClient) Options(options *SearchOptions) *CraigslistClient {
-	self.options = options
-	return self
+func (c *CraigslistClient) Options(options *SearchOptions) *CraigslistClient {
+	c.options = options
+	return c
 }
 
-func (self *CraigslistClient) Search(searchTerm string) (results Listing) {
+func (c *CraigslistClient) Search(searchTerm string) (results Listing) {
 	query := strings.Replace(searchTerm, " ", "+", -1)
 	resultsFound := 1
 	for startItem := 0; resultsFound > 0; startItem += resultsFound {
-		feed, err := self.get("/search", params{param{"query", query}, param{"s", strconv.Itoa(startItem)}})
+		feed, err := c.get("/search", params{param{"query", query}, param{"s", strconv.Itoa(startItem)}})
 		if err != nil {
 			panic(err)
 		}
