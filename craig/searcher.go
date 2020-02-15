@@ -2,21 +2,22 @@ package craig
 
 import (
 	"fmt"
+	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/slack"
 	"github.com/llvtt/craig/types"
 )
 
-func Search(conf *types.CraigConfig) {
-	craigslistClient := NewCraigslistClient("sfbay")
+func Search(conf *types.CraigConfig) error {
+	craigslistClient := craigslist.NewCraigslistClient("sfbay")
 	slackClient := slack.NewSlackClient()
 	dbClient := NewDBClient(conf)
 
-	options := &SearchOptions{HasPicture: true, SubRegion: conf.Region}
+	options := &craigslist.SearchOptions{HasPicture: true, SubRegion: conf.Region}
 	for _, search := range conf.Searches {
 		options.Neighborhoods = search.Neighborhoods
 		categoryClient := craigslistClient.Category(search.Category).Options(options)
 		for _, term := range search.Terms {
-			var newResults Listing
+			var newResults craigslist.Listing
 			for _, result := range categoryClient.Search(term) {
 				if dbClient.InsertSearchedItem(result) {
 					newResults = append(newResults, result)
@@ -34,4 +35,6 @@ func Search(conf *types.CraigConfig) {
 			}
 		}
 	}
+	// TODO proper error handling
+	return nil
 }

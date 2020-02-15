@@ -1,9 +1,10 @@
-package craig
+package craigslist
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/llvtt/craig/types"
 	"io"
 	"net/http"
 	"strings"

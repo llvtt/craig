@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/llvtt/craig/craig"
 	"github.com/llvtt/craig/types"
 )
 
@@ -14,23 +15,22 @@ type CraigService interface {
 }
 
 type service struct {
+	config *types.CraigConfig
 	logger log.Logger
 }
 
-func NewService(logger log.Logger) *service {
-	return &service{logger: logger}
+func NewService(config *types.CraigConfig, logger log.Logger) *service {
+	return &service{config: config, logger: logger}
 }
 
 func (s *service) Search(ctx context.Context) error {
 	level.Info(s.logger).Log("msg", "Called method: Search")
-	// todo
-	return nil
+	return craig.Search(s.config)
 }
 
 func (s *service) ListSearches(ctx context.Context) (*[]types.CraigslistSearch, error) {
 	level.Info(s.logger).Log("msg", "Called method: ListSearches")
-	// todo
-	return &[]types.CraigslistSearch{}, nil
+	return &s.config.Searches, nil
 }
 
 func (s *service) Health(ctx context.Context) (string, error) {

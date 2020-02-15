@@ -1,9 +1,6 @@
 package types
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
 	"time"
 )
 
@@ -27,17 +24,4 @@ type CraigslistItem struct {
 	ThumbnailUrl string    `json:"thumbnail_url"`
 	IndexDate    time.Time `json:"index_date"`
 	PublishDate  time.Time `json:"publish_date"`
-}
-
-func ParseConfig(filename string) *CraigConfig {
-	var config CraigConfig
-	if file, err := os.Open(filename); err != nil {
-		panic(err)
-	} else if contents, err := ioutil.ReadAll(file); err != nil {
-		panic(err)
-	} else if err := json.Unmarshal(contents, &config); err != nil {
-		panic(err)
-	} else {
-		return &config
-	}
 }

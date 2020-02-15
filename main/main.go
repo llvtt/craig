@@ -2,37 +2,45 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/llvtt/craig/server"
+	"github.com/llvtt/craig/types"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 )
 
 const DEFAULT_CONFIG_FILE_NAME = "config.json"
 
 func main() {
-	var (
-		httpAddr = flag.String("http", ":8080", "http listen address")
-	)
-
-	//configFilePath := flag.String(
-	//	"config-file",
-	//	DEFAULT_CONFIG_FILE_NAME,
-	//	"The path to the config file.")
-
 	var logger log.Logger
 	logger = log.NewJSONLogger(os.Stdout)
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
+	var (
+		httpAddr = flag.String("http", ":8080", "http listen address")
+	)
+
+	configFilePath := flag.String(
+		"config-file",
+		DEFAULT_CONFIG_FILE_NAME,
+		"The path to the config file.")
+
 	flag.Parse()
+
+	level.Info(logger).Log("msg", "Loading configs from file " + *configFilePath)
+	config := parseConfig(*configFilePath)
+
+
 	ctx := context.Background()
-	svc := server.NewService(logger)
+	svc := server.NewService(config, logger)
 
 	errChan := make(chan error)
 	go func() {
@@ -57,4 +65,18 @@ func main() {
 
 	//server.NewHTTPServer()
 	level.Error(logger).Log(<-errChan)
+}
+
+
+func parseConfig(filename string) *types.CraigConfig {
+	var config types.CraigConfig
+	if file, err := os.Open(filename); err != nil {
+		panic(err)
+	} else if contents, err := ioutil.ReadAll(file); err != nil {
+		panic(err)
+	} else if err := json.Unmarshal(contents, &config); err != nil {
+		panic(err)
+	} else {
+		return &config
+	}
 }

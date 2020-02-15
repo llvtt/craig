@@ -1,4 +1,4 @@
-package craig
+package craigslist
 
 import (
 	"fmt"

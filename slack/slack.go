@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/llvtt/craig/craig"
+	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/types"
 	"io/ioutil"
 	"net/http"
@@ -62,7 +62,7 @@ func (self *SlackClient) SendString(format string, args ...interface{}) {
 
 func (self *SlackClient) SendItem(item *types.CraigslistItem) {
 	var attachments []*Attachment
-	for _, imageUrl := range craig.GetImageUrls(item) {
+	for _, imageUrl := range craigslist.GetImageUrls(item) {
 		attachments = append(
 			attachments,
 			&Attachment{
