@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"os"
+
 	log "github.com/go-kit/kit/log"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
-	"os"
 )
 
 type DBClient interface {
@@ -20,7 +21,7 @@ type JsonDBClient struct {
 	dbFile  string
 	byUrl   map[string]*types.CraigslistItem
 	byTitle map[string]*types.CraigslistItem
-	logger log.Logger
+	logger  log.Logger
 }
 
 func NewDBClient(conf *types.CraigConfig, logger log.Logger) (DBClient, error) {
@@ -43,7 +44,7 @@ func NewDBClient(conf *types.CraigConfig, logger log.Logger) (DBClient, error) {
 }
 
 func (c JsonDBClient) initDB() error {
-	file, err := os.Open(c.dbFile)
+	file, err := os.OpenFile(c.dbFile, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return utils.WrapError("could not open db file", err)
 	}
