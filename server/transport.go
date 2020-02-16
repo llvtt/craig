@@ -3,29 +3,30 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"github.com/llvtt/craig/types"
 	"net/http"
+
+	"github.com/llvtt/craig/types"
 )
 
-type SearchRequest struct {}
+type SearchRequest struct{}
 
 type SearchReply struct {
 	// todo
-	Err  string `json:"err,omitempty"`
+	Err string `json:"err,omitempty"`
 }
 
-type ListSearchesRequest struct {}
+type ListSearchesRequest struct{}
 
 type ListSearchesReply struct {
-	Searches *[]types.CraigslistSearch `json:"searches"`
-	Err  string                        `json:"err,omitempty"`
+	Searches []types.CraigslistSearch `json:"searches"`
+	Err      string                   `json:"err,omitempty"`
 }
 
-type HealthRequest struct {}
+type HealthRequest struct{}
 
 type HealthReply struct {
 	Status string `json:"status"`
-	Err  string `json:"err,omitempty"`
+	Err    string `json:"err,omitempty"`
 }
 
 func decodeSearchRequest(_ context.Context, r *http.Request) (interface{}, error) {

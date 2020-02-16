@@ -6,6 +6,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.5.1
 	github.com/go-kit/kit v0.9.0
 	github.com/go-logfmt/logfmt v0.5.0 // indirect
+	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/mmcdole/gofeed v1.0.0-beta2

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/llvtt/craig/craig"
@@ -11,13 +12,13 @@ import (
 
 type CraigService interface {
 	Search(ctx context.Context) error
-	ListSearches(ctx context.Context) (*[]types.CraigslistSearch, error)
+	ListSearches(ctx context.Context) ([]types.CraigslistSearch, error)
 	Health(ctx context.Context) (string, error)
 }
 
 type service struct {
-	config *types.CraigConfig
-	logger log.Logger
+	config   *types.CraigConfig
+	logger   log.Logger
 	searcher craig.Searcher
 }
 
@@ -34,9 +35,9 @@ func (s *service) Search(ctx context.Context) error {
 	return s.searcher.Search()
 }
 
-func (s *service) ListSearches(ctx context.Context) (*[]types.CraigslistSearch, error) {
+func (s *service) ListSearches(ctx context.Context) ([]types.CraigslistSearch, error) {
 	level.Info(s.logger).Log("msg", "Called method: ListSearches")
-	return &s.config.Searches, nil
+	return s.config.Searches, nil
 }
 
 func (s *service) Health(ctx context.Context) (string, error) {

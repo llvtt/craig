@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -17,9 +18,9 @@ type Endpoints struct {
 
 func NewEndpoints(s CraigService, logger log.Logger) Endpoints {
 	return Endpoints{
-		SearchEndpoint: makeSearchEndpoint(s),
-		ListSearchesEndpoint: makeListSearchesEndpoint(s,logger),
-		HealthEndpoint: makeHealthEndpoint(s),
+		SearchEndpoint:       makeSearchEndpoint(s),
+		ListSearchesEndpoint: makeListSearchesEndpoint(s, logger),
+		HealthEndpoint:       makeHealthEndpoint(s),
 	}
 }
 
@@ -59,7 +60,6 @@ func makeHealthEndpoint(s CraigService) endpoint.Endpoint {
 	}
 }
 
-
 func (e Endpoints) Search(ctx context.Context) error {
 	req := SearchRequest{}
 	resp, err := e.SearchEndpoint(ctx, req)
@@ -73,7 +73,7 @@ func (e Endpoints) Search(ctx context.Context) error {
 	return nil
 }
 
-func (e Endpoints) ListSearches(ctx context.Context) (*[]types.CraigslistSearch, error) {
+func (e Endpoints) ListSearches(ctx context.Context) ([]types.CraigslistSearch, error) {
 	req := ListSearchesRequest{}
 	resp, err := e.ListSearchesEndpoint(ctx, req)
 	if err != nil {
@@ -81,7 +81,7 @@ func (e Endpoints) ListSearches(ctx context.Context) (*[]types.CraigslistSearch,
 	}
 	reply := resp.(ListSearchesReply)
 	if reply.Err != "" {
-		return nil,errors.New(reply.Err)
+		return nil, errors.New(reply.Err)
 	}
 	return reply.Searches, nil
 }
@@ -98,4 +98,3 @@ func (e Endpoints) Health(ctx context.Context) (string, error) {
 	}
 	return reply.Status, nil
 }
-
