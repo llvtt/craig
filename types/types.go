@@ -24,4 +24,5 @@ type CraigslistItem struct {
 	ThumbnailUrl string    `json:"thumbnail_url"`
 	IndexDate    time.Time `json:"index_date"`
 	PublishDate  time.Time `json:"publish_date"`
+	Price        float32   `json:"price"`
 }

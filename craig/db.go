@@ -90,6 +90,8 @@ func (c JsonDBClient) flushDB() error {
 }
 
 func (c JsonDBClient) InsertSearchedItem(item *types.CraigslistItem) (bool, error) {
+	// check to see if we've posted about this item already
+	// if the item already exists in the database, return false and do nothing
 	if _, ok := c.byUrl[item.Url]; ok {
 		return false, nil
 	} else if _, ok := c.byTitle[item.Title]; ok {
@@ -99,7 +101,7 @@ func (c JsonDBClient) InsertSearchedItem(item *types.CraigslistItem) (bool, erro
 	c.byTitle[item.Title] = item
 	err := c.flushDB()
 	if err != nil {
-		return false, err
+		return false, utils.WrapError("Could not flush db when inserting item", err)
 	}
 	return true, nil
 }

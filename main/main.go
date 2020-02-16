@@ -37,7 +37,10 @@ func main() {
 	flag.Parse()
 
 	level.Info(logger).Log("msg", "Loading configs from file " + *configFilePath)
-	config := parseConfig(*configFilePath)
+	config, err := parseConfig(*configFilePath)
+	if err != nil {
+		panic(utils.WrapError("Could not start craig!", err).Error())
+	}
 
 
 	ctx := context.Background()
@@ -63,20 +66,19 @@ func main() {
 		errChan <- http.ListenAndServe(*httpAddr, handler)
 	}()
 
-	//server.NewHTTPServer()
 	level.Error(logger).Log(<-errChan)
 }
 
 
-func parseConfig(filename string) *types.CraigConfig {
+func parseConfig(filename string) (*types.CraigConfig, error) {
 	var config types.CraigConfig
 	if file, err := os.Open(filename); err != nil {
-		panic(err)
+		return nil, utils.WrapError("could not open config file: "+filename, err)
 	} else if contents, err := ioutil.ReadAll(file); err != nil {
-		panic(err)
+		return nil, utils.WrapError("could not read config file: "+filename, err)
 	} else if err := json.Unmarshal(contents, &config); err != nil {
-		panic(err)
+		return nil, utils.WrapError("could not parse config file: "+filename, err)
 	} else {
-		return &config
+		return &config, nil
 	}
 }

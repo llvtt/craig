@@ -50,7 +50,11 @@ func (s *searcher) Search() error {
 		categoryClient := s.craigslistClient.Category(search.Category).Options(options)
 		for _, term := range search.Terms {
 			var newResults craigslist.Listing
-			for _, result := range categoryClient.Search(term) {
+			listing, err := categoryClient.Search(term)
+			if err != nil {
+				return utils.WrapError(fmt.Sprintf("Could not search term: %s", term), err)
+			}
+			for _, result := range listing {
 				inserted, err := s.dbClient.InsertSearchedItem(result)
 				if err != nil {
 					return utils.WrapError("could not insert searched item", err)
