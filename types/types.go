@@ -18,11 +18,11 @@ type CraigConfig struct {
 }
 
 type CraigslistItem struct {
-	Url          string    `json:"url"`
-	Title        string    `json:"title"`
-	Description  string    `json:"description"`
-	ThumbnailUrl string    `json:"thumbnail_url"`
-	IndexDate    time.Time `json:"index_date"`
-	PublishDate  time.Time `json:"publish_date"`
-	Price        float32   `json:"price"`
+	Url          string    `json:"url",db:"url"`
+	Title        string    `json:"title",db:"title"`
+	Description  string    `json:"description",db:"description"`
+	ThumbnailUrl string    `json:"thumbnail_url",db:"thumbnail_url"`
+	IndexDate    time.Time `json:"index_date",db:"index_date"`
+	PublishDate  time.Time `json:"publish_date",db:"publish_date"`
+	Price        float32   `json:"price",db:"price"`
 }

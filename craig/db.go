@@ -28,13 +28,24 @@ func NewDBClient(conf *types.CraigConfig, logger log.Logger) (DBClient, error) {
 	var client DBClient
 	switch conf.DBType {
 	case "json":
-		var jsonClient JsonDBClient
-		jsonClient = JsonDBClient{conf.DBFile, make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem), logger}
+		var jsonClient *JsonDBClient
+		jsonClient = &JsonDBClient{conf.DBFile, make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem), logger}
 		err := jsonClient.initDB()
 		if err != nil {
 			return nil, err
 		}
 		client = jsonClient
+	case "sqlite":
+		var sqlClient *SqliteClient
+		sqlClient = &SqliteClient{
+			conf.DBFile,
+			nil,
+			&logger,
+		}
+		if err := sqlClient.InitDB(); err != nil {
+			return nil, err
+		}
+		client = sqlClient
 	case "":
 		return nil, errors.New("no db type specified. must specify db_type in config file")
 	default:
@@ -43,7 +54,7 @@ func NewDBClient(conf *types.CraigConfig, logger log.Logger) (DBClient, error) {
 	return client, nil
 }
 
-func (c JsonDBClient) initDB() error {
+func (c *JsonDBClient) initDB() error {
 	file, err := os.OpenFile(c.dbFile, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		return utils.WrapError("could not open db file", err)
@@ -90,7 +101,7 @@ func (c JsonDBClient) flushDB() error {
 	return nil
 }
 
-func (c JsonDBClient) InsertSearchedItem(item *types.CraigslistItem) (bool, error) {
+func (c *JsonDBClient) InsertSearchedItem(item *types.CraigslistItem) (bool, error) {
 	// check to see if we've posted about this item already
 	// if the item already exists in the database, return false and do nothing
 	if _, ok := c.byUrl[item.Url]; ok {
