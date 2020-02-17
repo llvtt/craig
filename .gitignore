@@ -1,8 +1,8 @@
 go-craigslist
 test.db
-dev.config.json
 config.json
 go-craigslist.tgz
 deploy.sh
 lambda.sh
 database.json
+.env
