@@ -15,7 +15,7 @@ type Searcher interface {
 
 type searcher struct {
 	conf *types.CraigConfig
-	craigslistClient *craigslist.CraigslistClient
+	craigslistClient craigslist.CraigslistClient
 	slackClient      *slack.SlackClient
 	dbClient         DBClient
 	logger           log.Logger

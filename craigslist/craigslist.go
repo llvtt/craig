@@ -21,22 +21,40 @@ import (
 
 type Listing []*types.CraigslistItem
 
-func prependSlash(urlPart string) string {
-	if urlPart == "" {
-		return urlPart
-	}
-	return "/" + urlPart
+type SearchOptions struct {
+	HasPicture    bool
+	SubRegion     string
+	Neighborhoods []int
 }
 
-func extractThumbnail(item *gofeed.Item) string {
-	enclosureList := item.Extensions["enc"]["enclosure"]
-	if len(enclosureList) == 0 {
-		return ""
-	}
-	return enclosureList[0].Attrs["resource"]
+type param []string
+type params []param
+
+type CraigslistClient interface {
+    CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error)
+	Category(category string) CraigslistClient
+	Options(options *SearchOptions) CraigslistClient
+	Search(searchTerm string) (Listing, error)
 }
 
-func (c *CraigslistClient) CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error) {
+type client struct {
+	region   string
+	category string
+	options  *SearchOptions
+	parser   *gofeed.Parser
+	byUrl    map[string]*types.CraigslistItem
+	byTitle  map[string]*types.CraigslistItem
+	logger   log.Logger
+}
+
+func NewCraigslistClient(region string, logger log.Logger) CraigslistClient {
+	client := &client{region, "", &SearchOptions{}, gofeed.NewParser(),
+		make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem), logger}
+	return client
+}
+
+
+func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error) {
 	publishDate, err := time.Parse(time.RFC3339, item.Published)
 	if err != nil {
 		panic(err)
@@ -59,7 +77,55 @@ func (c *CraigslistClient) CraigslistItemFromRssItem(item *gofeed.Item) (*types.
 	}, nil
 }
 
-func (c *CraigslistClient) getPrice(item *gofeed.Item) (float32, error) {
+func (c *client) Category(category string) CraigslistClient {
+	c.category = category
+	return c
+}
+
+func (c *client) Options(options *SearchOptions) CraigslistClient {
+	c.options = options
+	return c
+}
+
+func (c *client) Search(searchTerm string) (Listing, error) {
+	query := strings.Replace(searchTerm, " ", "+", -1)
+	resultsFound := 1
+	var results Listing
+	for startItem := 0; resultsFound > 0; startItem += resultsFound {
+		feed, err := c.get("/search", params{param{"query", query}, param{"s", strconv.Itoa(startItem)}})
+		if err != nil {
+			return nil, utils.WrapError("Could not execute craigslist search request. ", err)
+		}
+		for _, item := range feed.Items {
+			rssItem, err := c.CraigslistItemFromRssItem(item)
+			if err != nil {
+				// skip the item, don't fail the whole request
+				level.Error(c.logger).Log(fmt.Sprintf("Could not convert rss item into craigslist item. Item was %s", item), err)
+			}
+			results = append(results, rssItem)
+			startItem += 1
+		}
+		resultsFound = len(feed.Items)
+	}
+	return results, nil
+}
+
+func prependSlash(urlPart string) string {
+	if urlPart == "" {
+		return urlPart
+	}
+	return "/" + urlPart
+}
+
+func extractThumbnail(item *gofeed.Item) string {
+	enclosureList := item.Extensions["enc"]["enclosure"]
+	if len(enclosureList) == 0 {
+		return ""
+	}
+	return enclosureList[0].Attrs["resource"]
+}
+
+func (c *client) getPrice(item *gofeed.Item) (float32, error) {
 	url := item.Link
 	res, err := http.Get(url)
 	if err != nil {
@@ -94,48 +160,7 @@ func (c *CraigslistClient) getPrice(item *gofeed.Item) (float32, error) {
 	return price, nil
 }
 
-type CraigslistClient struct {
-	region   string
-	category string
-	options  *SearchOptions
-	parser   *gofeed.Parser
-	byUrl    map[string]*types.CraigslistItem
-	byTitle  map[string]*types.CraigslistItem
-	logger   log.Logger
-}
-
-func NewCraigslistClient(region string, logger log.Logger) *CraigslistClient {
-	client := &CraigslistClient{region, "", &SearchOptions{}, gofeed.NewParser(),
-		make(map[string]*types.CraigslistItem), make(map[string]*types.CraigslistItem), logger}
-	return client
-}
-
-type SearchOptions struct {
-	HasPicture    bool
-	SubRegion     string
-	Neighborhoods []int
-}
-
-type param []string
-type params []param
-
-func (c *CraigslistClient) parameterString(p params) string {
-	var paramParts []string
-	for _, param := range p {
-		paramParts = append(paramParts, fmt.Sprintf("%s=%s", param[0], param[1]))
-	}
-	paramParts = append(paramParts, "format=rss")
-	return fmt.Sprintf("?%s", strings.Join(paramParts, "&"))
-}
-
-func (c *CraigslistClient) optionsToParams(p params) params {
-	for _, nh := range c.options.Neighborhoods {
-		p = append(p, param{"nh", strconv.Itoa(nh)})
-	}
-	return p
-}
-
-func (c *CraigslistClient) buildUrl(path string, p params) string {
+func (c *client) buildUrl(path string, p params) string {
 	return fmt.Sprintf(
 		"http://%s.craigslist.org%s%s%s%s",
 		c.region,
@@ -146,42 +171,26 @@ func (c *CraigslistClient) buildUrl(path string, p params) string {
 	)
 }
 
-func (c *CraigslistClient) get(path string, p params) (feed *gofeed.Feed, err error) {
+func (c *client) get(path string, p params) (feed *gofeed.Feed, err error) {
 	url := fmt.Sprintf(c.buildUrl(path, p))
 	level.Info(c.logger).Log("msg", "Getting url: "+url)
 	feed, err = c.parser.ParseURL(url)
 	return
 }
 
-func (c *CraigslistClient) Category(category string) *CraigslistClient {
-	c.category = category
-	return c
-}
-
-func (c *CraigslistClient) Options(options *SearchOptions) *CraigslistClient {
-	c.options = options
-	return c
-}
-
-func (c *CraigslistClient) Search(searchTerm string) (Listing, error) {
-	query := strings.Replace(searchTerm, " ", "+", -1)
-	resultsFound := 1
-	var results Listing
-	for startItem := 0; resultsFound > 0; startItem += resultsFound {
-		feed, err := c.get("/search", params{param{"query", query}, param{"s", strconv.Itoa(startItem)}})
-		if err != nil {
-			return nil, utils.WrapError("Could not execute craigslist search request. ", err)
-		}
-		for _, item := range feed.Items {
-			rssItem, err := c.CraigslistItemFromRssItem(item)
-			if err != nil {
-				// skip the item, don't fail the whole request
-				level.Error(c.logger).Log(fmt.Sprintf("Could not convert rss item into craigslist item. Item was %s", item), err)
-			}
-			results = append(results, rssItem)
-			startItem += 1
-		}
-		resultsFound = len(feed.Items)
+func (c *client) parameterString(p params) string {
+	var paramParts []string
+	for _, param := range p {
+		paramParts = append(paramParts, fmt.Sprintf("%s=%s", param[0], param[1]))
 	}
-	return results, nil
+	paramParts = append(paramParts, "format=rss")
+	return fmt.Sprintf("?%s", strings.Join(paramParts, "&"))
 }
+
+func (c *client) optionsToParams(p params) params {
+	for _, nh := range c.options.Neighborhoods {
+		p = append(p, param{"nh", strconv.Itoa(nh)})
+	}
+	return p
+}
+
