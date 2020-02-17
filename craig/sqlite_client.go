@@ -2,6 +2,7 @@ package craig
 
 import (
 	"fmt"
+	"github.com/go-kit/kit/log/level"
 
 	"github.com/go-kit/kit/log"
 	"github.com/jmoiron/sqlx"
@@ -39,7 +40,7 @@ values(:title, :url, :thumbnail_url, :index_date, :publish_date, :price)
 type SqliteClient struct {
 	dbFile string
 	db     *sqlx.DB
-	logger *log.Logger
+	logger log.Logger
 }
 
 func wrapSqlError(statement string, err error) error {
@@ -72,4 +73,9 @@ func (c *SqliteClient) InsertSearchedItem(item *types.CraigslistItem) (bool, err
 		}
 	}
 	return false, utils.WrapError("could not insert item", err)
+}
+func (c *SqliteClient) InsertPrice(item *types.CraigslistItem) (*types.PriceDrop, error) {
+	// TODO Implement
+	level.Warn(c.logger).Log("msg", "Insert price not implemented for sqlite db client")
+	return nil,nil
 }

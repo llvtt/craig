@@ -100,7 +100,7 @@ func (c *client) Search(searchTerm string) (Listing, error) {
 			rssItem, err := c.CraigslistItemFromRssItem(item)
 			if err != nil {
 				// skip the item, don't fail the whole request
-				level.Error(c.logger).Log(fmt.Sprintf("Could not convert rss item into craigslist item. Item was %s", item), err)
+				level.Error(c.logger).Log(fmt.Sprintf("Could not convert rss item into craigslist item. Item was %v", item), err)
 			}
 			results = append(results, rssItem)
 			startItem += 1

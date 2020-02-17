@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 )
 
 type SlackMessage struct {
@@ -70,6 +71,25 @@ func messageTextForItem(item *types.CraigslistItem) string {
 		item.Description)
 }
 
+func messageTextForPriceDrop(priceDrop *types.PriceDrop) string {
+	item := priceDrop.Item
+	text := fmt.Sprintf("*Price just dropped from $%d to $%d.*  ", priceDrop.PreviousPrice / 100, priceDrop.CurrentPrice / 100)
+	if priceDrop.PreviousPrice != priceDrop.MaxPrice {
+		text += fmt.Sprintf("*_Original price was $%d._*", priceDrop.MaxPrice / 100)
+	}
+	text += "\n"
+	now := time.Now()
+	ageOfItemInDays := now.Sub(priceDrop.MaxPricePublishDate).Round(time.Hour * 24)
+	text += fmt.Sprintf(" _Post has been up for the past %d days_\n", int(ageOfItemInDays.Hours() / 24))
+	text += fmt.Sprintf(
+		"*%s*\n%s\n%s",
+		item.Title,
+		item.Url,
+		item.Description)
+
+	return text
+}
+
 func (c *SlackClient) SendString(format string, args ...interface{}) {
 	c.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
@@ -92,6 +112,29 @@ func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
 	c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForItem(item),
+			Attachments: attachments})
+	return nil
+}
+
+func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop) error {
+	item := priceDrop.Item
+	var attachments []*Attachment
+	urls, err := c.imageScraper.GetImageUrls(item)
+	if err != nil {
+		return utils.WrapError("Could not send item to craigslist", err)
+	}
+	for _, imageUrl := range urls {
+		attachments = append(
+			attachments,
+			&Attachment{
+				ImageUrl: imageUrl,
+				Fallback: imageUrl,
+			})
+	}
+	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
+	c.sendSlackMessage(
+		&SlackMessage{
+			Text:        messageTextForPriceDrop(priceDrop),
 			Attachments: attachments})
 	return nil
 }

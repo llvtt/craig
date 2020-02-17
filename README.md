@@ -58,7 +58,7 @@ Example configuration:
 ```json
 {
   "db_type": "json",
-  "db_file": "/tmp/database.json",
+  "db_dir": "/tmp/craig",
   "region": "sfc",
   "searches": [
     {

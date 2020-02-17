@@ -49,11 +49,15 @@ func (s *searcher) Search() error {
 		options.Neighborhoods = search.Neighborhoods
 		categoryClient := s.craigslistClient.Category(search.Category).Options(options)
 		for _, term := range search.Terms {
+			// gather all matching results from craigslist
 			var newResults craigslist.Listing
+			var priceDrops []*types.PriceDrop
 			listing, err := categoryClient.Search(term)
 			if err != nil {
 				return utils.WrapError(fmt.Sprintf("Could not search term: %s", term), err)
 			}
+
+			// check to see which results are new and which are not
 			for _, result := range listing {
 				inserted, err := s.dbClient.InsertSearchedItem(result)
 				if err != nil {
@@ -62,15 +66,37 @@ func (s *searcher) Search() error {
 				if inserted {
 					newResults = append(newResults, result)
 				}
+
+				// check for price drops
+				priceDrop, err := s.dbClient.InsertPrice(result)
+				if err != nil {
+					return utils.WrapError("could not insert price into db", err)
+				}
+				if priceDrop != nil {
+					priceDrops = append(priceDrops, priceDrop)
+				}
 			}
+
+
+			// post any new results to slack
 			if len(newResults) > 0 {
-				announcement := fmt.Sprintf("Found %d new *free* items on my list!", len(newResults))
+				var announcement string
 				if len(term) > 0 {
 					announcement = fmt.Sprintf("Found %d new items matching *%s* on my list!", len(newResults), term)
+				} else {
+					announcement = fmt.Sprintf("Found %d new *free* items on my list!", len(newResults))
 				}
 				s.slackClient.SendString(announcement)
 				for _, result := range newResults {
 					s.slackClient.SendItem(result)
+				}
+			}
+
+			if len(priceDrops) > 0 {
+				announcement := fmt.Sprintf("Found %d items with price drops! :fire: :money_with_wings: :fire: ", len(priceDrops))
+				s.slackClient.SendString(announcement)
+				for _, priceDrop := range priceDrops {
+					s.slackClient.SendPriceDrop(priceDrop)
 				}
 			}
 		}
