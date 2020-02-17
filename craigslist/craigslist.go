@@ -125,7 +125,7 @@ func extractThumbnail(item *gofeed.Item) string {
 	return enclosureList[0].Attrs["resource"]
 }
 
-func (c *client) getPrice(item *gofeed.Item) (float32, error) {
+func (c *client) getPrice(item *gofeed.Item) (int, error) {
 	url := item.Link
 	res, err := http.Get(url)
 	if err != nil {
@@ -144,19 +144,26 @@ func (c *client) getPrice(item *gofeed.Item) (float32, error) {
 
 	selection := doc.Find(".price")
 	priceText := selection.Text()
+	if priceText == "" {
+		level.Debug(c.logger).Log("msg", "no price found for item: "+item.Title)
+		return 0, nil
+	}
 	if strings.HasPrefix(priceText, "$") {
 		priceText = priceText[1:]
 	}
 
-	var price float32
-	price64, err := strconv.ParseFloat(priceText, 32)
+	// assumes price is always in whole dollars!
+	var price int
+	price64, err := strconv.ParseInt(priceText, 0, 32)
 	if err != nil {
 		return 0, utils.WrapError(fmt.Sprintf("Could not parse price from text %s. Url was %s", priceText, url), err)
 	}
-	price = float32(price64)
+	price = int(price64)
 
+	// convert price to cents
+	price = price * 100
 
-	level.Info(c.logger).Log("price", price)
+	level.Debug(c.logger).Log("msg", fmt.Sprintf("Price in cents %d for item %s", price, item.Title))
 	return price, nil
 }
 
