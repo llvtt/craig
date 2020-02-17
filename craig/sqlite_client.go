@@ -20,7 +20,7 @@ create table if not exists items (
   price int
 );
 
-create unique index on items (url, title);
+create unique index if not exists unique_items on items (url, title);
 
 create table if not exists search_terms (
   term varchar,
@@ -28,7 +28,7 @@ create table if not exists search_terms (
   category varchar
 );
 
-create unique index on search_terms (term, neighborhood, category);
+create unique index if not exists unique_search_terms on search_terms (term, neighborhood, category);
 `
 
 const insertStmt = `
