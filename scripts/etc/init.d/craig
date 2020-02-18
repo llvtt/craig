@@ -9,7 +9,8 @@
 ### END INIT INFO
 
 CRAIG_HOME=/home/ec2-user/go/bin
-SCRIPT="CRAIG_SLACK_ENDPOINT=<fill me in> $CRAIG_HOME/craig --config-file=/etc/craig/config.json"
+CRAIG_EXECUTABLE=craig-server
+SCRIPT="CRAIG_SLACK_ENDPOINT=<fill me in> $CRAIG_HOME/$CRAIG_EXECUTABLE --config-file=/etc/craig/config.json"
 RUNAS=root
 
 PIDFILE=/var/run/craig.pid
