@@ -81,11 +81,7 @@ func messageTextForPriceDrop(priceDrop *types.PriceDrop) string {
 	now := time.Now()
 	ageOfItemInDays := now.Sub(priceDrop.MaxPricePublishDate).Round(time.Hour * 24)
 	text += fmt.Sprintf(" _Post has been up for the past %d days_\n", int(ageOfItemInDays.Hours() / 24))
-	text += fmt.Sprintf(
-		"*%s*\n%s\n%s",
-		item.Title,
-		item.Url,
-		item.Description)
+	text += messageTextForItem(item)
 
 	return text
 }
