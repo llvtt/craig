@@ -1,12 +1,16 @@
 provider "aws" {
-  region = "${var.aws_region}"
+  region = var.aws_region
 }
 
 provider "archive" {}
 
+locals {
+  craig_binary = "../../../craig"
+}
+
 data "archive_file" "zip" {
   type        = "zip"
-  source_file = "craig"
+  source_file = local.craig_binary
   output_path = "craig.zip"
 }
 
@@ -26,16 +30,16 @@ data "aws_iam_policy_document" "policy" {
 
 resource "aws_iam_role" "iam_for_lambda" {
   name               = "iam_for_lambda"
-  assume_role_policy = "${data.aws_iam_policy_document.policy.json}"
+  assume_role_policy = data.aws_iam_policy_document.policy.json
 }
 
-resource "aws_lapnmbda_function" "lambda" {
+resource "aws_lambda_function" "lambda" {
   function_name = "craig"
 
-  filename         = "${data.archive_file.zip.output_path}"
-  source_code_hash = "${data.archive_file.zip.output_base64sha256}"
+  filename         = data.archive_file.zip.output_path
+  source_code_hash = data.archive_file.zip.output_base64sha256
 
-  role = "${aws_iam_role.iam_for_lambda.arn}"
+  role = aws_iam_role.iam_for_lambda.arn
 
   # TODO: ensure the name is correct
   # rename craig package to "core" or "craig-core"
@@ -44,7 +48,7 @@ resource "aws_lapnmbda_function" "lambda" {
 
   environment {
     variables = {
-      CRAIG_SLACK_ENDPOINT = "${var.slack_endpoint}"
+      CRAIG_SLACK_ENDPOINT = var.slack_endpoint
     }
   }
 }
