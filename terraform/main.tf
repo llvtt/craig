@@ -5,7 +5,7 @@ provider "aws" {
 provider "archive" {}
 
 locals {
-  craig_binary = "../../../craig"
+  craig_binary = "../../../lambda/main/main"
 }
 
 data "archive_file" "zip" {
@@ -34,14 +34,18 @@ resource "aws_iam_role" "iam_for_lambda" {
 }
 
 resource "aws_lambda_function" "craig_lambda" {
-  function_name = "craig"
+//  function_name = "craig"
+//  handler = "craig"
+  // TODO get this working with the real craig code
+  // this is just the dummy code
+  function_name = "hello"
+  handler = "main"
 
   filename         = data.archive_file.zip.output_path
   source_code_hash = data.archive_file.zip.output_base64sha256
 
   role = aws_iam_role.iam_for_lambda.arn
 
-  handler = "craig"
   runtime = "go1.x"
 
   environment {
