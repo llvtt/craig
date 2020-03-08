@@ -6,3 +6,4 @@ deploy.sh
 lambda.sh
 database.json
 .env
+terraform/.terraform/
