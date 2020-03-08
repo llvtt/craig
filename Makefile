@@ -4,7 +4,7 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
-BINARY_NAME=craig-server
+BINARY_NAME=craig
 BINARY_UNIX=$(BINARY_NAME)_unix
 
 # Craig parameters

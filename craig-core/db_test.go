@@ -1,4 +1,4 @@
-package craig
+package craig_core
 
 import (
 	"context"

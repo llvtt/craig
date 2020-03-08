@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/llvtt/craig/craig"
+	craig "github.com/llvtt/craig/craig-core"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
 )
