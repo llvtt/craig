@@ -8,9 +8,7 @@ BINARY_NAME=craig
 BINARY_UNIX=$(BINARY_NAME)_unix
 
 # Craig parameters
-ENV_FILE='./.env'
 CONFIG_FILE='./dev.config.json'
-include .env
 export
 
 all: test build
@@ -23,8 +21,6 @@ clean:
 		rm -f $(BINARY_NAME)
 		rm -f $(BINARY_UNIX)
 run:
-#		if [ -f $(ENV_FILE) ]; then
-#		fi
 		./$(BINARY_NAME) --config-file=$(CONFIG_FILE)
 deps:
 		go mod download
