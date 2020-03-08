@@ -33,7 +33,7 @@ resource "aws_iam_role" "iam_for_lambda" {
   assume_role_policy = data.aws_iam_policy_document.policy.json
 }
 
-resource "aws_lambda_function" "lambda" {
+resource "aws_lambda_function" "craig_lambda" {
   function_name = "craig"
 
   filename         = data.archive_file.zip.output_path
@@ -41,8 +41,6 @@ resource "aws_lambda_function" "lambda" {
 
   role = aws_iam_role.iam_for_lambda.arn
 
-  # TODO: ensure the name is correct
-  # rename craig package to "core" or "craig-core"
   handler = "craig"
   runtime = "go1.x"
 
@@ -51,4 +49,23 @@ resource "aws_lambda_function" "lambda" {
       CRAIG_SLACK_ENDPOINT = var.slack_endpoint
     }
   }
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.craig_lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.scrape_craigslist_trigger_rule.arn
+}
+
+resource "aws_cloudwatch_event_rule" "scrape_craigslist_trigger_rule" {
+  name                = "ScrapeCraigslistTriggerRule"
+  description         = "Cron schedule to make craig scrape craigslist"
+  schedule_expression = "rate(1 hour)"
+}
+
+resource "aws_cloudwatch_event_target" "scrape_craigslist_trigger" {
+  arn = aws_lambda_function.craig_lambda.arn
+  rule = aws_cloudwatch_event_rule.scrape_craigslist_trigger_rule.name
 }
