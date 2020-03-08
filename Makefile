@@ -29,16 +29,11 @@ deps:
 		go mod download
 		go mod verify
 
-
 # Cross compilation
 build-linux: clean
-		# depends on `brew install FiloSottile/musl-cross/musl-cross`
- 		# this is currently broken (doesn't compile on macos)
 		CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-gcc $(GOBUILD) -o $(BINARY_NAME) -a -v main/main.go
 
 build-lambda: clean-lambda
-		# depends on `brew install FiloSottile/musl-cross/musl-cross`
- 		# this is currently broken (doesn't compile on macos)
 		CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-gcc $(GOBUILD) -o $(LAMBDA_DIR)/$(BINARY_NAME_LAMBDA) -a -v $(LAMBDA_DIR)/main.go
 
 docker-build:
