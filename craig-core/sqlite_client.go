@@ -2,6 +2,7 @@ package craig_core
 
 import (
 	"fmt"
+
 	"github.com/go-kit/kit/log/level"
 
 	"github.com/go-kit/kit/log"
@@ -77,5 +78,5 @@ func (c *SqliteClient) InsertSearchedItem(item *types.CraigslistItem) (bool, err
 func (c *SqliteClient) InsertPrice(item *types.CraigslistItem) (*types.PriceDrop, error) {
 	// TODO Implement
 	level.Warn(c.logger).Log("msg", "Insert price not implemented for sqlite db client")
-	return nil,nil
+	return nil, nil
 }

@@ -10,6 +10,7 @@ LAMBDA_DIR=./lambda/main
 TERRAFORM_ENV=prod
 TERRAFORM_DIR=./terraform/environments/${TERRAFORM_ENV}
 LAMBDA_BUILD_FLAGS=-ldflags '-d -s -w' -a -tags netgo -installsuffix netgo
+LAMBDA_BUILD_ENV=CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-gcc CGO_LDFLAGS='-d -s -w'
 
 # Craig parameters
 CONFIG_FILE='./dev.config.json'
@@ -34,7 +35,7 @@ deps:
 
 # Cross compilation
 build-lambda: clean-lambda
-	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-gcc $(GOBUILD) -o $(LAMBDA_DIR)/$(BINARY_NAME_LAMBDA) $(LAMBDA_BUILD_FLAGS) -v $(LAMBDA_DIR)
+	$(LAMBDA_BUILD_ENV) $(GOBUILD) -o $(LAMBDA_DIR)/$(BINARY_NAME_LAMBDA) $(LAMBDA_BUILD_FLAGS) -v $(LAMBDA_DIR)
 
 deploy-plan:  build-lambda
 	cd $(TERRAFORM_DIR) && terraform init && terraform plan
