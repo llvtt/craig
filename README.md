@@ -40,6 +40,10 @@ Run craig server. Assumes there is a file `./.env` with secrets, or that secrets
 make run
 ```
 
+To cross-complile Craig, you will need to install musl-cross:
+
+    brew install FiloSottile/musl-cross/musl-cross
+
 ## Configuration
 
 Craig uses environment variables and a configuration file.

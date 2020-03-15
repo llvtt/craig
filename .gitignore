@@ -5,4 +5,5 @@ go-craigslist.tgz
 deploy.sh
 lambda.sh
 database.json
-.env
+.envrc
+.terraform
