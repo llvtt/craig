@@ -34,16 +34,15 @@ resource "aws_iam_role" "iam_for_lambda" {
 }
 
 resource "aws_lambda_function" "craig_lambda" {
-//  function_name = "craig"
-//  handler = "craig"
+  //  function_name = "craig"
+  //  handler = "craig"
   // TODO get this working with the real craig code
   // this is just the dummy code
   function_name = "hello"
-  handler = "main"
+  handler       = "main"
 
   filename         = data.archive_file.zip.output_path
-//  source_code_hash = data.archive_file.zip.output_base64sha256
-  source_code_hash = "abc123"
+  source_code_hash = data.archive_file.zip.output_base64sha256
 
   role = aws_iam_role.iam_for_lambda.arn
 
@@ -71,6 +70,6 @@ resource "aws_cloudwatch_event_rule" "scrape_craigslist_trigger_rule" {
 }
 
 resource "aws_cloudwatch_event_target" "scrape_craigslist_trigger" {
-  arn = aws_lambda_function.craig_lambda.arn
+  arn  = aws_lambda_function.craig_lambda.arn
   rule = aws_cloudwatch_event_rule.scrape_craigslist_trigger_rule.name
 }
