@@ -1,4 +1,4 @@
-package craig_core
+package db
 
 import (
 	"context"

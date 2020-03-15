@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/llvtt/craig/craigslist"
+	"github.com/llvtt/craig/db"
 	"github.com/llvtt/craig/slack"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
@@ -14,10 +15,10 @@ type Searcher interface {
 }
 
 type searcher struct {
-	conf *types.CraigConfig
+	conf             *types.CraigConfig
 	craigslistClient craigslist.CraigslistClient
 	slackClient      *slack.SlackClient
-	dbClient         DBClient
+	dbClient         db.DBClient
 	logger           log.Logger
 }
 
@@ -27,7 +28,7 @@ func NewSearcher(conf *types.CraigConfig, logger log.Logger) (Searcher, error) {
 	if err != nil {
 		return nil, utils.WrapError("could not initialize slack client", err)
 	}
-	dbClient, err := NewDBClient(conf, logger)
+	dbClient, err := db.NewDBClient(conf, logger)
 	if err != nil {
 		return nil, utils.WrapError("could not initialize searcher", err)
 	}
