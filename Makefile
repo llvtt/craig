@@ -10,7 +10,7 @@ LAMBDA_DIR=./lambda/main
 TERRAFORM_ENV=prod
 TERRAFORM_DIR=./terraform/environments/${TERRAFORM_ENV}
 LAMBDA_BUILD_FLAGS=-ldflags '-d -s -w' -a -tags netgo -installsuffix netgo
-LAMBDA_BUILD_ENV=CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-gcc CGO_LDFLAGS='-d -s -w'
+LAMBDA_BUILD_ENV=CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-gcc CGO_LDFLAGS='-static'
 
 # Craig parameters
 CONFIG_FILE='./dev.config.json'
