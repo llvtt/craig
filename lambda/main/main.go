@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -41,8 +42,8 @@ func NewSqliteClient() (client *SqliteClient, err error) {
 	return
 }
 
-func hello() (string, error) {
-	fmt.Println("Hello ƛ!")
+func Handler(ctx context.Context, event interface{}) (string, error) {
+	fmt.Sprintf("Handler invoked with input: %v\n", event)
 	if client, err := NewSqliteClient(); err != nil {
 		return "", err
 	} else if _, err := client.db.Exec(tableStatement); err != nil {
@@ -52,8 +53,7 @@ func hello() (string, error) {
 }
 
 func main() {
-	fmt.Println("hi")
-
+	fmt.Println("Craig main")
 	// Make the handler available for Remote Procedure Call by AWS Lambda
-	lambda.Start(hello)
+	lambda.Start(Handler)
 }
