@@ -10,6 +10,7 @@ func hello() (string, error) {
 }
 
 func main() {
+	print("hi")
 	// Make the handler available for Remote Procedure Call by AWS Lambda
 	lambda.Start(hello)
 }
