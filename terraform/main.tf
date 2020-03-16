@@ -5,7 +5,7 @@ provider "aws" {
 provider "archive" {}
 
 locals {
-  craig_binary = "../../../lambda/main/main"
+  craig_binary = "../../../main/lambda/main"
   function_name = "craig"
 }
 
