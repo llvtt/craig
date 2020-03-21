@@ -33,6 +33,24 @@ const conf = `
   ]
 }
 `
+func HandlerGeneric(ctx context.Context, event interface{}) (string, error) {
+	// scrape craigslist trigger event looks like:
+	/*
+		map[account:860626312307
+		    detail:map[]
+		    detail-type:Scheduled Event
+		    id:e137a93d-05ce-0978-3201-d6795dff8b30
+		    region:us-west-2
+		    resources:[arn:aws:events:us-west-2:860626312307:rule/ScrapeCraigslistTriggerRule]
+		    source:aws.events
+		    time:2020-03-21T17:04:58Z
+		    version:0
+		]
+	*/
+	fmt.Printf("Handler invoked with input: %v\n", event)
+	fmt.Printf("input has type: %T\n", event)
+	return "", nil
+}
 
 func Handler(ctx context.Context, event events.CloudWatchEvent) (string, error) {
 	fmt.Printf("Handler invoked with input: %v\n", event)
