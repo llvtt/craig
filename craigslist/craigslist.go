@@ -64,7 +64,6 @@ func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.Craigslist
 	if err != nil {
 		return nil, utils.WrapError("Could no get price for item: "+item.Link, err)
 	}
-	level.Info(c.logger).Log("price", price)
 
 	return &types.CraigslistItem{
 		Url:          item.Link,
@@ -145,7 +144,6 @@ func (c *client) getPrice(item *gofeed.Item) (int, error) {
 	selection := doc.Find(".price")
 	priceText := selection.Text()
 	if priceText == "" {
-		level.Debug(c.logger).Log("msg", "no price found for item: "+item.Title)
 		return 0, nil
 	}
 	if strings.HasPrefix(priceText, "$") {
@@ -163,7 +161,6 @@ func (c *client) getPrice(item *gofeed.Item) (int, error) {
 	// convert price to cents
 	price = price * 100
 
-	level.Debug(c.logger).Log("msg", fmt.Sprintf("Price in cents %d for item %s", price, item.Title))
 	return price, nil
 }
 

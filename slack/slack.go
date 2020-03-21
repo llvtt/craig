@@ -104,7 +104,6 @@ func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
 				Fallback: imageUrl,
 			})
 	}
-	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
 	c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForItem(item),

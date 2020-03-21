@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-lambda-go/events"
 	clambda "github.com/llvtt/craig/lambda"
 	"github.com/llvtt/craig/server"
 	"github.com/llvtt/craig/types"
@@ -33,8 +34,9 @@ const conf = `
 }
 `
 
-func Handler(ctx context.Context, event interface{}) (string, error) {
+func Handler(ctx context.Context, event events.CloudWatchEvent) (string, error) {
 	fmt.Printf("Handler invoked with input: %v\n", event)
+	fmt.Printf("input has type: %T\n", event)
 	var logger log.Logger
 	logger = log.NewJSONLogger(os.Stdout)
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
@@ -51,11 +53,19 @@ func Handler(ctx context.Context, event interface{}) (string, error) {
 
 	lambdaServer := clambda.NewLambdaServer(svc)
 
-	return lambdaServer.Handle(ctx, event)
+	return lambdaServer.Search(ctx, event)
 }
 
 func main() {
 	fmt.Println("Craig main")
+
+	// Lambda only allows specifying one handler per lambda function
+	// TODO figure out how we can have use the same binary for multiple different functions
+	// we'll need a function to respond to api gateway requests as well as cloudwatch events
+	// we could configure which handler is started with env variables?
+	// or have the handler function take a generic event interface{} type and try to parse it?
+	// lambda does not have a nice way to parse events AFAICT
+
 	// Make the handler available for Remote Procedure Call by AWS Lambda
 	lambda.Start(Handler)
 }

@@ -3,6 +3,7 @@ package craig_core
 import (
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/db"
 	"github.com/llvtt/craig/slack"
@@ -88,9 +89,15 @@ func (s *searcher) Search() error {
 					announcement = fmt.Sprintf("Found %d new *free* items on my list!", len(newResults))
 				}
 				s.slackClient.SendString(announcement)
+				messagesSent := 0
 				for _, result := range newResults {
-					s.slackClient.SendItem(result)
+					err := s.slackClient.SendItem(result)
+					if err != nil {
+						return utils.WrapError("caught error when sending slack message", err)
+					}
+					messagesSent++
 				}
+				level.Info(s.logger).Log("msg", fmt.Sprintf("sent %d slack messages", messagesSent))
 			}
 
 			if len(priceDrops) > 0 {
