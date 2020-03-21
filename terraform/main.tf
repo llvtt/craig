@@ -37,6 +37,7 @@ resource "aws_iam_role" "iam_for_lambda" {
 resource "aws_lambda_function" "craig_lambda" {
   function_name = local.function_name
   handler       = "main"
+  timeout       = 300
 
   filename         = data.archive_file.zip.output_path
   source_code_hash = data.archive_file.zip.output_base64sha256
