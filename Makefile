@@ -37,7 +37,7 @@ deps:
 build-lambda: clean-lambda
 	$(LAMBDA_BUILD_ENV) $(GOBUILD) -o $(LAMBDA_DIR)/$(BINARY_NAME_LAMBDA) $(LAMBDA_BUILD_FLAGS) -v $(LAMBDA_DIR)
 
-deploy-plan:  build-lambda
+deploy-plan:
 	cd $(TERRAFORM_DIR) && terraform init && terraform plan
 
 deploy: build-lambda

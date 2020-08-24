@@ -15,6 +15,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+// TODO load conf from conf file
 const conf = `
 {
   "db_type": "json",
@@ -33,7 +34,8 @@ const conf = `
   ]
 }
 `
-func HandlerGeneric(ctx context.Context, event interface{}) (string, error) {
+
+func SearchHandler(ctx context.Context, event events.CloudWatchEvent) (string, error) {
 	// scrape craigslist trigger event looks like:
 	/*
 		map[account:860626312307
@@ -47,14 +49,16 @@ func HandlerGeneric(ctx context.Context, event interface{}) (string, error) {
 		    version:0
 		]
 	*/
-	fmt.Printf("Handler invoked with input: %v\n", event)
-	fmt.Printf("input has type: %T\n", event)
+	return initCraig().Search(ctx, event)
+}
+
+func GatewayHandler(ctx context.Context, event events.CloudWatchEvent) (string, error) {
+	// TODO
+	// Parse API gateway events and respond accordingly
 	return "", nil
 }
 
-func Handler(ctx context.Context, event events.CloudWatchEvent) (string, error) {
-	fmt.Printf("Handler invoked with input: %v\n", event)
-	fmt.Printf("input has type: %T\n", event)
+func initCraig() clambda.LambdaServer {
 	var logger log.Logger
 	logger = log.NewJSONLogger(os.Stdout)
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
@@ -68,24 +72,26 @@ func Handler(ctx context.Context, event events.CloudWatchEvent) (string, error) 
 	if err != nil {
 		panic(utils.WrapError("Could not start craig!", err).Error())
 	}
-
-	lambdaServer := clambda.NewLambdaServer(svc)
-
-	return lambdaServer.Search(ctx, event)
+	return clambda.NewLambdaServer(logger, svc)
 }
 
+// entry-point for scrape lambda function.
 func main() {
-	fmt.Println("Craig main")
+	fmt.Println("Scrape craig main")
 
 	// Lambda only allows specifying one handler per lambda function
-	// TODO figure out how we can have use the same binary for multiple different functions
-	// we'll need a function to respond to api gateway requests as well as cloudwatch events
-	// we could configure which handler is started with env variables?
-	// or have the handler function take a generic event interface{} type and try to parse it?
-	// lambda does not have a nice way to parse events AFAICT
+	// we'll need a different entry-point function to respond to api gateway requests
 
 	// Make the handler available for Remote Procedure Call by AWS Lambda
-	lambda.Start(Handler)
+	lambda.Start(SearchHandler)
+}
+
+// entry-point for gateway lambda function.
+func gatewayMain() {
+	fmt.Println("gateway craig main")
+
+	// Make the handler available for Remote Procedure Call by AWS Lambda
+	lambda.Start(GatewayHandler)
 }
 
 func parseConfig(conf string) (*types.CraigConfig, error) {
