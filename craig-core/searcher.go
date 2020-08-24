@@ -61,6 +61,11 @@ func (s *searcher) Search() error {
 
 			// check to see which results are new and which are not
 			for _, result := range listing {
+				if result == nil {
+					level.Error(s.logger).Log("result was nil!")
+					continue
+				}
+				level.Debug(s.logger).Log("result", result)
 				inserted, err := s.dbClient.InsertSearchedItem(result)
 				if err != nil {
 					return utils.WrapError("could not insert searched item", err)
@@ -88,12 +93,16 @@ func (s *searcher) Search() error {
 				} else {
 					announcement = fmt.Sprintf("Found %d new *free* items on my list!", len(newResults))
 				}
-				s.slackClient.SendString(announcement)
+				err := s.slackClient.SendString(announcement)
+				if err != nil {
+					return utils.WrapError("caught error when sending slack message", err)
+				}
 				messagesSent := 0
 				for _, result := range newResults {
 					err := s.slackClient.SendItem(result)
 					if err != nil {
-						return utils.WrapError("caught error when sending slack message", err)
+						level.Error(s.logger).Log("caught error when sending slack message", err)
+						continue
 					}
 					messagesSent++
 				}

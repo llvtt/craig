@@ -43,7 +43,7 @@ func NewSlackClient(logger log.Logger) (*SlackClient, error) {
 	return &SlackClient{endpoint, craigslist.NewImageScraper(logger), logger}, nil
 }
 
-func (c *SlackClient) sendSlackMessage(message *SlackMessage) {
+func (c *SlackClient) sendSlackMessage(message *SlackMessage) error {
 	payload, err := json.Marshal(message)
 	if err != nil {
 		panic(err)
@@ -58,9 +58,13 @@ func (c *SlackClient) sendSlackMessage(message *SlackMessage) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode >= 300 {
-		level.Warn(c.logger).Log("msg", fmt.Sprintf("possible bad request, response was %s\n", string(responseBytes)))
+	if resp.StatusCode >= 400 && resp.StatusCode <= 499 {
+		return fmt.Errorf("bad request, response was %s\n", string(responseBytes))
 	}
+	if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
+		return fmt.Errorf("server error, response was %s\n", string(responseBytes))
+	}
+	return nil
 }
 
 func messageTextForItem(item *types.CraigslistItem) string {
@@ -86,8 +90,8 @@ func messageTextForPriceDrop(priceDrop *types.PriceDrop) string {
 	return text
 }
 
-func (c *SlackClient) SendString(format string, args ...interface{}) {
-	c.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
+func (c *SlackClient) SendString(format string, args ...interface{}) error {
+	return c.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
 
 func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
@@ -104,11 +108,10 @@ func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
 				Fallback: imageUrl,
 			})
 	}
-	c.sendSlackMessage(
+	return c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForItem(item),
 			Attachments: attachments})
-	return nil
 }
 
 func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop) error {
@@ -127,10 +130,9 @@ func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop) error {
 			})
 	}
 	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
-	c.sendSlackMessage(
+	return c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForPriceDrop(priceDrop),
 			Attachments: attachments})
-	return nil
 }
 

@@ -149,6 +149,7 @@ func (c *client) getPrice(item *gofeed.Item) (int, error) {
 	if strings.HasPrefix(priceText, "$") {
 		priceText = priceText[1:]
 	}
+	priceText = strings.Replace(priceText, ",", "", -1)
 
 	// assumes price is always in whole dollars!
 	var price int
