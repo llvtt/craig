@@ -35,7 +35,10 @@ const conf = `
 }
 `
 
-func SearchHandler(ctx context.Context, event events.CloudWatchEvent) (string, error) {
+type Handler struct {
+}
+
+func (h Handler) Invoke(ctx context.Context, event []byte) ([]byte, error) {
 	// scrape craigslist trigger event looks like:
 	/*
 		map[account:860626312307
@@ -49,13 +52,33 @@ func SearchHandler(ctx context.Context, event events.CloudWatchEvent) (string, e
 		    version:0
 		]
 	*/
-	return initCraig().Search(ctx, event)
+	craig := initCraig()
+	var cloudWatchEvent events.CloudWatchEvent
+	if err := json.Unmarshal(event, &cloudWatchEvent); err == nil {
+		result, err := craig.Search(ctx, cloudWatchEvent)
+		return []byte(result), err
+	} else {
+		return nil, fmt.Errorf("unrecognized event type: %v", event)
+	}
 }
 
-func GatewayHandler(ctx context.Context, event events.CloudWatchEvent) (string, error) {
-	// TODO
-	// Parse API gateway events and respond accordingly
-	return "", nil
+////////////
+// entry-point for lambda functions.
+////////////
+func main() {
+	fmt.Println("Scrape craig main")
+
+	// Make the handler available for Remote Procedure Call by AWS Lambda
+	lambda.StartHandler(Handler{})
+}
+
+func parseConfig(conf string) (*types.CraigConfig, error) {
+	var config types.CraigConfig
+	err := json.Unmarshal([]byte(conf), &config)
+	if err != nil {
+		return nil, utils.WrapError("could not parse config", err)
+	}
+	return &config, nil
 }
 
 func initCraig() clambda.LambdaServer {
@@ -75,30 +98,3 @@ func initCraig() clambda.LambdaServer {
 	return clambda.NewLambdaServer(logger, svc)
 }
 
-// entry-point for scrape lambda function.
-func main() {
-	fmt.Println("Scrape craig main")
-
-	// Lambda only allows specifying one handler per lambda function
-	// we'll need a different entry-point function to respond to api gateway requests
-
-	// Make the handler available for Remote Procedure Call by AWS Lambda
-	lambda.Start(SearchHandler)
-}
-
-// entry-point for gateway lambda function.
-func gatewayMain() {
-	fmt.Println("gateway craig main")
-
-	// Make the handler available for Remote Procedure Call by AWS Lambda
-	lambda.Start(GatewayHandler)
-}
-
-func parseConfig(conf string) (*types.CraigConfig, error) {
-	var config types.CraigConfig
-	err := json.Unmarshal([]byte(conf), &config)
-	if err != nil {
-		return nil, utils.WrapError("could not parse config", err)
-	}
-	return &config, nil
-}
