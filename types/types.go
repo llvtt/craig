@@ -25,6 +25,7 @@ type CraigslistItem struct {
 	IndexDate    time.Time `json:"index_date",db:"index_date"`
 	PublishDate  time.Time `json:"publish_date",db:"publish_date"`
 	Price        int       `json:"price",db:"price"`
+	ImageUrls    []string  `json:"image_urls",db:"image_urls"`
 }
 
 type CraigslistPriceLog struct {

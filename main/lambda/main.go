@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	clambda "github.com/llvtt/craig/lambda"
-	"github.com/llvtt/craig/server"
+	"github.com/llvtt/craig/http"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
 	"os"
@@ -91,7 +91,7 @@ func initCraig() clambda.LambdaServer {
 		panic(utils.WrapError("Could not start craig!", err).Error())
 	}
 
-	svc, err := server.NewService(config, logger)
+	svc, err := http.NewService(config, logger)
 	if err != nil {
 		panic(utils.WrapError("Could not start craig!", err).Error())
 	}

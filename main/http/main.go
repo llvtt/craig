@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/llvtt/craig/server"
+	chttp "github.com/llvtt/craig/http"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
 	"io/ioutil"
@@ -44,7 +44,7 @@ func main() {
 
 
 	ctx := context.Background()
-	svc, err := server.NewService(config, logger)
+	svc, err := chttp.NewService(config, logger)
 	if err != nil {
 		panic(utils.WrapError("Could not start craig!", err).Error())
 	}
@@ -57,12 +57,12 @@ func main() {
 	}()
 
 	// mapping endpoints
-	endpoints := server.NewEndpoints(svc, logger)
+	endpoints := chttp.NewEndpoints(svc, logger)
 
 	// HTTP transport
 	go func() {
 		level.Info(logger).Log("msg", fmt.Sprintf("craig is listening on port: %s", *httpAddr))
-		handler := server.NewHTTPServer(ctx, endpoints)
+		handler := chttp.NewHTTPServer(ctx, endpoints)
 		errChan <- http.ListenAndServe(*httpAddr, handler)
 	}()
 

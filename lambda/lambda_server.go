@@ -6,7 +6,7 @@ import (
 	"github.com/go-kit/kit/log"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/llvtt/craig/server"
+	"github.com/llvtt/craig/http"
 )
 
 type LambdaServer interface {
@@ -15,10 +15,10 @@ type LambdaServer interface {
 
 type lambdaServer struct {
 	logger log.Logger
-	svc server.CraigService
+	svc    http.CraigService
 }
 
-func NewLambdaServer(logger log.Logger, svc server.CraigService) LambdaServer {
+func NewLambdaServer(logger log.Logger, svc http.CraigService) LambdaServer {
 	return &lambdaServer{logger: logger, svc: svc}
 }
 

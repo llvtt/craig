@@ -31,9 +31,9 @@ type param []string
 type params []param
 
 type CraigslistClient interface {
-    CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error)
 	Category(category string) CraigslistClient
 	Options(options *SearchOptions) CraigslistClient
+	CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error)
 	Search(searchTerm string) (Listing, error)
 }
 
@@ -53,6 +53,15 @@ func NewCraigslistClient(region string, logger log.Logger) CraigslistClient {
 	return client
 }
 
+func (c *client) Category(category string) CraigslistClient {
+	c.category = category
+	return c
+}
+
+func (c *client) Options(options *SearchOptions) CraigslistClient {
+	c.options = options
+	return c
+}
 
 func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error) {
 	publishDate, err := time.Parse(time.RFC3339, item.Published)
@@ -74,16 +83,6 @@ func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.Craigslist
 		PublishDate:  publishDate,
 		Price:        price,
 	}, nil
-}
-
-func (c *client) Category(category string) CraigslistClient {
-	c.category = category
-	return c
-}
-
-func (c *client) Options(options *SearchOptions) CraigslistClient {
-	c.options = options
-	return c
 }
 
 func (c *client) Search(searchTerm string) (Listing, error) {

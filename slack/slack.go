@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/types"
-	"github.com/llvtt/craig/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -31,7 +29,6 @@ type Attachment struct {
 
 type SlackClient struct {
 	endpoint string
-	imageScraper craigslist.ImageScraper
 	logger log.Logger
 }
 
@@ -40,7 +37,7 @@ func NewSlackClient(logger log.Logger) (*SlackClient, error) {
 	if len(endpoint) == 0 {
 		return nil, errors.New("CRAIG_SLACK_ENDPOINT is empty!")
 	}
-	return &SlackClient{endpoint, craigslist.NewImageScraper(logger), logger}, nil
+	return &SlackClient{endpoint, logger}, nil
 }
 
 func (c *SlackClient) sendSlackMessage(message *SlackMessage) error {
@@ -62,7 +59,7 @@ func (c *SlackClient) sendSlackMessage(message *SlackMessage) error {
 		return fmt.Errorf("bad request, response was %s\n", string(responseBytes))
 	}
 	if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
-		return fmt.Errorf("server error, response was %s\n", string(responseBytes))
+		return fmt.Errorf("http error, response was %s\n", string(responseBytes))
 	}
 	return nil
 }
@@ -94,12 +91,8 @@ func (c *SlackClient) SendString(format string, args ...interface{}) error {
 	return c.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
 
-func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
+func (c *SlackClient) SendItem(item *types.CraigslistItem, urls []string) error {
 	var attachments []*Attachment
-	urls, err := c.imageScraper.GetImageUrls(item)
-	if err != nil {
-		return utils.WrapError("Could not send item to craigslist", err)
-	}
 	for _, imageUrl := range urls {
 		attachments = append(
 			attachments,
@@ -114,14 +107,11 @@ func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
 			Attachments: attachments})
 }
 
-func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop) error {
+func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop, urls []string) error {
 	item := priceDrop.Item
 	var attachments []*Attachment
-	urls, err := c.imageScraper.GetImageUrls(item)
-	if err != nil {
-		return utils.WrapError("Could not send item to craigslist", err)
-	}
 	for _, imageUrl := range urls {
+		level.Info(c.logger).Log("msg", "image url is %s" + imageUrl)
 		attachments = append(
 			attachments,
 			&Attachment{

@@ -93,3 +93,7 @@ Example configuration:
   ]
 }
 ```
+
+## Project Layout
+
+* `craig-core`: 
