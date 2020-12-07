@@ -1,11 +1,11 @@
-package server
+package http
 
 import (
 	"context"
+	"github.com/llvtt/craig/craigslist"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	craig "github.com/llvtt/craig/craig-core"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
 )
@@ -19,11 +19,11 @@ type CraigService interface {
 type service struct {
 	config   *types.CraigConfig
 	logger   log.Logger
-	searcher craig.Searcher
+	searcher craigslist.Searcher
 }
 
 func NewService(config *types.CraigConfig, logger log.Logger) (CraigService, error) {
-	searcher, err := craig.NewSearcher(config, logger)
+	searcher, err := craigslist.NewSearcher(config, logger)
 	if err != nil {
 		return nil, utils.WrapError("could not initialize craig service", err)
 	}

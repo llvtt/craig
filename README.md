@@ -4,22 +4,20 @@ A Craigslist Slack bot written in Go. Craig searches for terms in neighborhoods 
 
 ## Craig's Endpoints
 
-List the searches currently configured with Craig.
-```
-GET /searches
-```
+### `GET /searches`
 
-Execute a search. Craig goes to craigslist looking for the search terms, updates the db, and posts to slack.
-```
-POST /search
-```
+List the Searches currently configured with Craig.
+
+### `POST /search`
+
+Execute a search. Craig goes to Craigslist looking for the search terms, updates the db, and posts to slack.
+
+### `GET /health`
+
 Health check.
-```
-GET /health
-```
 
+## Building
 
-## Buildling
 Download dependencies
 ```shell script
 make deps
@@ -34,15 +32,33 @@ or just
 make
 ```
 
-Run craig server. Assumes there is a file `./.env` with secrets, or that secrets already exist in environment. Assumes there is a config file `./dev.config.json`
+To cross-complile Craig, you will need to install musl-cross:
+
+    brew install FiloSottile/musl-cross/musl-cross
+
+## Running
+
+Run craig server. Assumes there is a file `./.env` with secrets, or that secrets
+already exist in environment. Assumes there is a config file `./dev.config.json`
 
 ```shell script
 make run
 ```
 
-To cross-complile Craig, you will need to install musl-cross:
+## Deployment
 
-    brew install FiloSottile/musl-cross/musl-cross
+Craig is deployed with Terraform.
+
+Several variables are expected to be defined in the environment:
+
+* `TF_VAR_slack_endpoint`
+* `TF_VAR_aws_region`
+
+Deploy Craig with the Make target:
+
+```sh
+make deploy
+```
 
 ## Configuration
 
@@ -77,3 +93,7 @@ Example configuration:
   ]
 }
 ```
+
+## Project Layout
+
+* `craig-core`: 

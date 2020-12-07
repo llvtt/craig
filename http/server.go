@@ -1,4 +1,4 @@
-package server
+package http
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// NewHTTPServer is a good little server
+// NewHTTPServer is a good little http
 func NewHTTPServer(ctx context.Context, endpoints Endpoints) http.Handler {
 	r := mux.NewRouter()
 	r.Use(commonMiddleware) // @see https://stackoverflow.com/a/51456342

@@ -6,7 +6,7 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 BINARY_NAME=craig
 BINARY_NAME_LAMBDA=main
-LAMBDA_DIR=./lambda/main
+LAMBDA_DIR=./main/lambda
 TERRAFORM_ENV=prod
 TERRAFORM_DIR=./terraform/environments/${TERRAFORM_ENV}
 LAMBDA_BUILD_FLAGS=-ldflags '-d -s -w' -a -tags netgo -installsuffix netgo
@@ -18,14 +18,14 @@ export
 
 all: test build
 build: clean
-		$(GOBUILD) -o $(BINARY_NAME) -v main/main.go
+		$(GOBUILD) -o $(BINARY_NAME) -v ./main/http
 test:
 		$(GOTEST) -v ./...
 clean:
-		$(GOCLEAN) ./main
+		$(GOCLEAN) ./main/http
 		rm -f $(BINARY_NAME)
 clean-lambda:
-		$(GOCLEAN) ./main
+		$(GOCLEAN) ./main/lambda
 		rm -f $(LAMBDA_DIR)/$(BINARY_NAME)
 run:
 		./$(BINARY_NAME) --config-file=$(CONFIG_FILE)
@@ -37,7 +37,7 @@ deps:
 build-lambda: clean-lambda
 	$(LAMBDA_BUILD_ENV) $(GOBUILD) -o $(LAMBDA_DIR)/$(BINARY_NAME_LAMBDA) $(LAMBDA_BUILD_FLAGS) -v $(LAMBDA_DIR)
 
-deploy-plan:  build-lambda
+deploy-plan:
 	cd $(TERRAFORM_DIR) && terraform init && terraform plan
 
 deploy: build-lambda

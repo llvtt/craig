@@ -5,8 +5,8 @@ provider "aws" {
 provider "archive" {}
 
 locals {
-  craig_binary = "../../../lambda/main/main"
-  function_name = "craig"
+  craig_binary = "../../../main/lambda/main"
+  function_name = "scrape-craig"
 }
 
 data "archive_file" "zip" {
@@ -34,9 +34,10 @@ resource "aws_iam_role" "iam_for_lambda" {
   assume_role_policy = data.aws_iam_policy_document.policy.json
 }
 
-resource "aws_lambda_function" "craig_lambda" {
+resource "aws_lambda_function" "scrape_craig_lambda" {
   function_name = local.function_name
   handler       = "main"
+  timeout       = 300
 
   filename         = data.archive_file.zip.output_path
   source_code_hash = data.archive_file.zip.output_base64sha256
@@ -57,7 +58,7 @@ resource "aws_lambda_function" "craig_lambda" {
 resource "aws_lambda_permission" "allow_cloudwatch" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.craig_lambda.function_name
+  function_name = aws_lambda_function.scrape_craig_lambda.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.scrape_craigslist_trigger_rule.arn
 }
@@ -69,7 +70,7 @@ resource "aws_cloudwatch_event_rule" "scrape_craigslist_trigger_rule" {
 }
 
 resource "aws_cloudwatch_event_target" "scrape_craigslist_trigger" {
-  arn  = aws_lambda_function.craig_lambda.arn
+  arn  = aws_lambda_function.scrape_craig_lambda.arn
   rule = aws_cloudwatch_event_rule.scrape_craigslist_trigger_rule.name
 }
 

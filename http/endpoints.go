@@ -1,9 +1,8 @@
-package server
+package http
 
 import (
 	"context"
 	"errors"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"

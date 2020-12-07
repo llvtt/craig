@@ -31,9 +31,9 @@ type param []string
 type params []param
 
 type CraigslistClient interface {
-    CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error)
 	Category(category string) CraigslistClient
 	Options(options *SearchOptions) CraigslistClient
+	CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error)
 	Search(searchTerm string) (Listing, error)
 }
 
@@ -53,6 +53,15 @@ func NewCraigslistClient(region string, logger log.Logger) CraigslistClient {
 	return client
 }
 
+func (c *client) Category(category string) CraigslistClient {
+	c.category = category
+	return c
+}
+
+func (c *client) Options(options *SearchOptions) CraigslistClient {
+	c.options = options
+	return c
+}
 
 func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.CraigslistItem, error) {
 	publishDate, err := time.Parse(time.RFC3339, item.Published)
@@ -64,7 +73,6 @@ func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.Craigslist
 	if err != nil {
 		return nil, utils.WrapError("Could no get price for item: "+item.Link, err)
 	}
-	level.Info(c.logger).Log("price", price)
 
 	return &types.CraigslistItem{
 		Url:          item.Link,
@@ -75,16 +83,6 @@ func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.Craigslist
 		PublishDate:  publishDate,
 		Price:        price,
 	}, nil
-}
-
-func (c *client) Category(category string) CraigslistClient {
-	c.category = category
-	return c
-}
-
-func (c *client) Options(options *SearchOptions) CraigslistClient {
-	c.options = options
-	return c
 }
 
 func (c *client) Search(searchTerm string) (Listing, error) {
@@ -145,12 +143,12 @@ func (c *client) getPrice(item *gofeed.Item) (int, error) {
 	selection := doc.Find(".price")
 	priceText := selection.Text()
 	if priceText == "" {
-		level.Debug(c.logger).Log("msg", "no price found for item: "+item.Title)
 		return 0, nil
 	}
 	if strings.HasPrefix(priceText, "$") {
 		priceText = priceText[1:]
 	}
+	priceText = strings.Replace(priceText, ",", "", -1)
 
 	// assumes price is always in whole dollars!
 	var price int
@@ -163,7 +161,6 @@ func (c *client) getPrice(item *gofeed.Item) (int, error) {
 	// convert price to cents
 	price = price * 100
 
-	level.Debug(c.logger).Log("msg", fmt.Sprintf("Price in cents %d for item %s", price, item.Title))
 	return price, nil
 }
 

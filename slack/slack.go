@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/types"
-	"github.com/llvtt/craig/utils"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -31,7 +29,6 @@ type Attachment struct {
 
 type SlackClient struct {
 	endpoint string
-	imageScraper craigslist.ImageScraper
 	logger log.Logger
 }
 
@@ -40,10 +37,10 @@ func NewSlackClient(logger log.Logger) (*SlackClient, error) {
 	if len(endpoint) == 0 {
 		return nil, errors.New("CRAIG_SLACK_ENDPOINT is empty!")
 	}
-	return &SlackClient{endpoint, craigslist.NewImageScraper(logger), logger}, nil
+	return &SlackClient{endpoint, logger}, nil
 }
 
-func (c *SlackClient) sendSlackMessage(message *SlackMessage) {
+func (c *SlackClient) sendSlackMessage(message *SlackMessage) error {
 	payload, err := json.Marshal(message)
 	if err != nil {
 		panic(err)
@@ -58,9 +55,13 @@ func (c *SlackClient) sendSlackMessage(message *SlackMessage) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode >= 300 {
-		level.Warn(c.logger).Log("msg", fmt.Sprintf("possible bad request, response was %s\n", string(responseBytes)))
+	if resp.StatusCode >= 400 && resp.StatusCode <= 499 {
+		return fmt.Errorf("bad request, response was %s\n", string(responseBytes))
 	}
+	if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
+		return fmt.Errorf("http error, response was %s\n", string(responseBytes))
+	}
+	return nil
 }
 
 func messageTextForItem(item *types.CraigslistItem) string {
@@ -86,16 +87,12 @@ func messageTextForPriceDrop(priceDrop *types.PriceDrop) string {
 	return text
 }
 
-func (c *SlackClient) SendString(format string, args ...interface{}) {
-	c.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
+func (c *SlackClient) SendString(format string, args ...interface{}) error {
+	return c.sendSlackMessage(&SlackMessage{Text: fmt.Sprintf(format, args...)})
 }
 
-func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
+func (c *SlackClient) SendItem(item *types.CraigslistItem, urls []string) error {
 	var attachments []*Attachment
-	urls, err := c.imageScraper.GetImageUrls(item)
-	if err != nil {
-		return utils.WrapError("Could not send item to craigslist", err)
-	}
 	for _, imageUrl := range urls {
 		attachments = append(
 			attachments,
@@ -104,22 +101,17 @@ func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
 				Fallback: imageUrl,
 			})
 	}
-	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
-	c.sendSlackMessage(
+	return c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForItem(item),
 			Attachments: attachments})
-	return nil
 }
 
-func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop) error {
+func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop, urls []string) error {
 	item := priceDrop.Item
 	var attachments []*Attachment
-	urls, err := c.imageScraper.GetImageUrls(item)
-	if err != nil {
-		return utils.WrapError("Could not send item to craigslist", err)
-	}
 	for _, imageUrl := range urls {
+		level.Info(c.logger).Log("msg", "image url is %s" + imageUrl)
 		attachments = append(
 			attachments,
 			&Attachment{
@@ -128,10 +120,9 @@ func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop) error {
 			})
 	}
 	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
-	c.sendSlackMessage(
+	return c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForPriceDrop(priceDrop),
 			Attachments: attachments})
-	return nil
 }
 
