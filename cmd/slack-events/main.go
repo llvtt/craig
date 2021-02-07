@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	slackbot "github.com/llvtt/craig/slack"
 	"os"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/llvtt/craig/db"
-	"github.com/slack-go/slack"
 )
 
 type Search struct {
@@ -19,13 +19,16 @@ type Search struct {
 	Created time.Time `dynamodbav:"created"`
 }
 
+const (
+	defaultSlackChannel = "cltest"
+)
+
 var (
 	sess           *session.Session
 	tableMgr       *db.DynamoDBAccessManager
 	searchesClient db.DataAccess
 
-	slacker            *slack.Client
-	slackSigningSecret string
+	slacker *slackbot.Slacker
 )
 
 func init() {
@@ -33,19 +36,11 @@ func init() {
 	tableMgr = db.NewDynamoDBAccessManager(dynamodb.New(sess))
 	searchesClient = tableMgr.Table("searches")
 
-	slacker = slack.New(os.Getenv("SLACK_ACCESS_TOKEN"))
-	slackSigningSecret = os.Getenv("SLACK_SIGNING_SECRET")
-}
-
-func postMessage(ctx context.Context, messageText string) error {
-	respChannel, respTs, err := slacker.PostMessageContext(ctx, "cltest",
-		slack.MsgOptionAsUser(true),
-		slack.MsgOptionText(messageText, false))
-
-	fmt.Println("respChannel", respChannel)
-	fmt.Println("respTs", respTs)
-
-	return err
+	slackChannel := os.Getenv("SLACK_CHANNEL")
+	if len(slackChannel) == 0 {
+		slackChannel = defaultSlackChannel
+	}
+	slacker = slackbot.NewSlacker(slackChannel)
 }
 
 // help [command]
@@ -60,14 +55,13 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) error {
 		err            error
 	)
 
-	//httpRequest, err := slackbot.HttpRequest(&req)
-	//if err != nil {
-	//	return err
-	//}
-	// TODO: parse slash commands from httpRequest
-
-	err = postMessage(ctx, "Looking for searches!")
-	err = postMessage(ctx, fmt.Sprintf("request = %+v", req))
+	slashCommand, err := slacker.ParseCommand(&req)
+	if err != nil {
+		return err
+	}
+	err = slacker.PostMessage(ctx, "received slash command: %+v", slashCommand)
+	err = slacker.PostMessage(ctx, "Looking for searches!")
+	err = slacker.PostMessage(ctx, "request = %+v", req)
 
 	for searchIterator, err = searchesClient.List(ctx); err == nil; err = searchIterator.Next(&search) {
 		fmt.Printf("search: %+v", search)

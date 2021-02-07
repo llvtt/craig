@@ -1,6 +1,9 @@
 package slack
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"github.com/slack-go/slack"
 	"io"
 	"io/ioutil"
@@ -19,7 +22,40 @@ func init() {
 	slackSigningSecret = os.Getenv("SLACK_SIGNING_SECRET")
 }
 
-func copyHeaders(req *events.APIGatewayProxyRequest) (header http.Header) {
+type Slacker struct {
+	Client   *slack.Client
+	Channel  string
+	verifier *slack.SecretsVerifier
+}
+
+func NewSlacker(channel string) *Slacker {
+	return &Slacker{slack.New(os.Getenv("SLACK_ACCESS_TOKEN")), channel, nil}
+}
+
+func (s *Slacker) ParseCommand(req *events.APIGatewayProxyRequest) (*slack.SlashCommand, error) {
+	httpReq, err := s.toHTTPRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd, err := slack.SlashCommandParse(httpReq)
+	if s.verifier == nil {
+		return nil, errors.New("no verifier")
+	}
+	if err := s.verifier.Ensure(); err != nil {
+		return nil, err
+	}
+
+	return &cmd, nil
+}
+
+func (s *Slacker) PostMessage(ctx context.Context, format string, args ...interface{}) error {
+	message := fmt.Sprintf(format, args...)
+	_, _, err := s.Client.PostMessageContext(ctx, s.Channel, slack.MsgOptionText(message, false))
+	return err
+}
+
+func (s *Slacker) copyHeaders(req *events.APIGatewayProxyRequest) (header http.Header) {
 	header = make(http.Header)
 	for name, values := range req.Headers {
 		splitValues := strings.Split(values, ",")
@@ -33,11 +69,12 @@ func copyHeaders(req *events.APIGatewayProxyRequest) (header http.Header) {
 	return
 }
 
-func HttpRequest(req *events.APIGatewayProxyRequest) (request *http.Request, err error) {
+func (s *Slacker) toHTTPRequest(req *events.APIGatewayProxyRequest) (request *http.Request, err error) {
 	var verifier slack.SecretsVerifier
-	headers := copyHeaders(req)
+	headers := s.copyHeaders(req)
 
 	verifier, err = slack.NewSecretsVerifier(headers, slackSigningSecret)
+	s.verifier = &verifier
 	if err != nil {
 		return
 	}
