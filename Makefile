@@ -10,10 +10,10 @@ BINARY_NAME=main
 
 all: test build
 build-dev: clean deps
-		$(GOBUILD) -o $(BINARY_NAME)-dev -v cmd/list-searches/main.go
+		$(GOBUILD) -o $(BINARY_NAME)-dev -v cmd/slack-events/main.go
 
 build: clean deps
-		$(LINUXFLAGS) $(GOBUILD) -o $(BINARY_NAME) -v cmd/list-searches/main.go
+		$(LINUXFLAGS) $(GOBUILD) -o $(BINARY_NAME) -v cmd/slack-events/main.go
 
 test:
 		$(GOTEST) -v ./...

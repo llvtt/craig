@@ -3,22 +3,31 @@ package db
 import (
 	"context"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
-// DynamoAccess implements DataAccess for DynamoDB.
-type DynamoAccess struct {
+// DynamoDBAccess implements DataAccess for DynamoDB.
+type DynamoDBAccess struct {
 	TableName string
 	Client    *dynamodb.DynamoDB
 }
 
-func NewDynamoAccess(tableName string, client *dynamodb.DynamoDB) *DynamoAccess {
-	return &DynamoAccess{tableName, client}
+type DynamoDBAccessManager struct {
+	client *dynamodb.DynamoDB
 }
 
-func (acc *DynamoAccess) List(ctx context.Context) (it Iterator, err error) {
+func NewDynamoDBAccessManager(client *dynamodb.DynamoDB) *DynamoDBAccessManager {
+	return &DynamoDBAccessManager{client}
+}
+
+func (mgr *DynamoDBAccessManager) Table(tableName string) *DynamoDBAccess {
+	return &DynamoDBAccess{tableName, mgr.client}
+}
+
+func (acc *DynamoDBAccess) List(ctx context.Context) (it Iterator, err error) {
 	input := &dynamodb.ScanInput{TableName: aws.String(acc.TableName)}
 
 	var docs []map[string]*dynamodb.AttributeValue
@@ -32,7 +41,7 @@ func (acc *DynamoAccess) List(ctx context.Context) (it Iterator, err error) {
 	return
 }
 
-func (acc *DynamoAccess) Upsert(ctx context.Context, record interface{}, previousRecord ...interface{}) error {
+func (acc *DynamoDBAccess) Upsert(ctx context.Context, record interface{}, previousRecord ...interface{}) error {
 	if len(previousRecord) > 1 {
 		return fmt.Errorf("up to one previousRecord may be provided, got %d", len(previousRecord))
 	}
@@ -69,7 +78,7 @@ func (acc *DynamoAccess) Upsert(ctx context.Context, record interface{}, previou
 // DynamoAccessIterator implements Iterator for DynamoAccess.
 type DynamoAccessIterator struct {
 	scannedItems []map[string]*dynamodb.AttributeValue
-	position int
+	position     int
 }
 
 func (it *DynamoAccessIterator) Next(out interface{}) (err error) {

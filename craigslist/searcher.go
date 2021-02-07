@@ -5,7 +5,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/db"
-	"github.com/llvtt/craig/slack"
+	"github.com/llvtt/craig/personal_scripts"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
 )
@@ -17,14 +17,14 @@ type Searcher interface {
 type searcher struct {
 	conf             *types.CraigConfig
 	craigslistClient craigslist.CraigslistClient
-	slackClient      *slack.SlackClient
+	slackClient      *personal_scripts.SlackClient
 	dbClient         db.DBClient
 	logger           log.Logger
 }
 
 func NewSearcher(conf *types.CraigConfig, logger log.Logger) (Searcher, error) {
 	craigslistClient := craigslist.NewCraigslistClient("sfbay", logger)
-	slackClient, err := slack.NewSlackClient(logger)
+	slackClient, err := personal_scripts.NewSlackClient(logger)
 	if err != nil {
 		return nil, utils.WrapError("could not initialize slack client", err)
 	}
@@ -34,15 +34,14 @@ func NewSearcher(conf *types.CraigConfig, logger log.Logger) (Searcher, error) {
 	}
 
 	return &searcher{
-		conf: conf,
+		conf:             conf,
 		craigslistClient: craigslistClient,
-		slackClient: slackClient,
-		dbClient: dbClient,
-		logger: logger,
+		slackClient:      slackClient,
+		dbClient:         dbClient,
+		logger:           logger,
 	}, nil
 
 }
-
 
 func (s *searcher) Search() error {
 	options := &craigslist.SearchOptions{HasPicture: true, SubRegion: s.conf.Region}
@@ -77,7 +76,6 @@ func (s *searcher) Search() error {
 					priceDrops = append(priceDrops, priceDrop)
 				}
 			}
-
 
 			// post any new results to slack
 			if len(newResults) > 0 {
