@@ -4,41 +4,48 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
-BINARY_NAME=craig
-BINARY_NAME_LAMBDA=main
-LAMBDA_DIR=./lambda/main
-TERRAFORM_ENV=prod
-TERRAFORM_DIR=./terraform/environments/${TERRAFORM_ENV}
-LAMBDA_BUILD_FLAGS=-ldflags '-d -s -w' -a -tags netgo -installsuffix netgo
-LAMBDA_BUILD_ENV=CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-gcc CGO_LDFLAGS='-static'
-
-# Craig parameters
-CONFIG_FILE='./dev.config.json'
-export
+LINUXFLAGS=GOOS=linux GOARCH=amd64
+TERRAFORM_DIR=./terraform
+BINARY_NAME=main
 
 all: test build
-build: clean
-		$(GOBUILD) -o $(BINARY_NAME) -v main/main.go
+build-dev: clean deps
+		$(GOBUILD) -o $(BINARY_NAME)-dev -v cmd/slack-events/main.go
+
+build: clean deps
+		$(LINUXFLAGS) $(GOBUILD) -o $(BINARY_NAME) -v cmd/slack-events/main.go
+
 test:
 		$(GOTEST) -v ./...
+
 clean:
-		$(GOCLEAN) ./main
+		$(GOCLEAN) ./cmd
 		rm -f $(BINARY_NAME)
+
 clean-lambda:
 		$(GOCLEAN) ./main
 		rm -f $(LAMBDA_DIR)/$(BINARY_NAME)
+
 run:
-		./$(BINARY_NAME) --config-file=$(CONFIG_FILE)
+		./$(BINARY_NAME)
+
 deps:
 		go mod download
 		go mod verify
 
-# Cross compilation
-build-lambda: clean-lambda
-	$(LAMBDA_BUILD_ENV) $(GOBUILD) -o $(LAMBDA_DIR)/$(BINARY_NAME_LAMBDA) $(LAMBDA_BUILD_FLAGS) -v $(LAMBDA_DIR)
+docker-build: build
+		docker build -t "craig" .
 
-deploy-plan:  build-lambda
-	cd $(TERRAFORM_DIR) && terraform init && terraform plan
+docker--set-tag-name:
+		$(eval tag_name=$(shell docker images --no-trunc --quiet craig | cut -d: -f2))
 
-deploy: build-lambda
-	cd $(TERRAFORM_DIR) && terraform init && terraform apply -auto-approve
+docker-push: docker-build docker--set-tag-name
+		docker tag "craig:latest" "${ECR_HOSTNAME}/craig:${tag_name}"
+		aws ecr get-login-password | docker login --username AWS --password-stdin ${ECR_HOSTNAME}
+		docker push "${ECR_HOSTNAME}/craig:${tag_name}"
+
+deploy-plan: docker--set-tag-name
+		cd $(TERRAFORM_DIR) && terraform init && terraform plan -var="tag_name=${tag_name}"
+
+deploy: docker--set-tag-name
+		cd $(TERRAFORM_DIR) && terraform init && terraform apply -auto-approve -var="tag_name=${tag_name}"

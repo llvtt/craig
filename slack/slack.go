@@ -30,9 +30,9 @@ type Attachment struct {
 }
 
 type SlackClient struct {
-	endpoint string
+	endpoint     string
 	imageScraper craigslist.ImageScraper
-	logger log.Logger
+	logger       log.Logger
 }
 
 func NewSlackClient(logger log.Logger) (*SlackClient, error) {
@@ -73,14 +73,14 @@ func messageTextForItem(item *types.CraigslistItem) string {
 
 func messageTextForPriceDrop(priceDrop *types.PriceDrop) string {
 	item := priceDrop.Item
-	text := fmt.Sprintf("*Price just dropped from $%d to $%d.*  ", priceDrop.PreviousPrice / 100, priceDrop.CurrentPrice / 100)
+	text := fmt.Sprintf("*Price just dropped from $%d to $%d.*  ", priceDrop.PreviousPrice/100, priceDrop.CurrentPrice/100)
 	if priceDrop.PreviousPrice != priceDrop.MaxPrice {
-		text += fmt.Sprintf("*_Original price was $%d._*", priceDrop.MaxPrice / 100)
+		text += fmt.Sprintf("*_Original price was $%d._*", priceDrop.MaxPrice/100)
 	}
 	text += "\n"
 	now := time.Now()
 	ageOfItemInDays := now.Sub(priceDrop.MaxPricePublishDate).Round(time.Hour * 24)
-	text += fmt.Sprintf(" _Post has been up for the past %d days_\n", int(ageOfItemInDays.Hours() / 24))
+	text += fmt.Sprintf(" _Post has been up for the past %d days_\n", int(ageOfItemInDays.Hours()/24))
 	text += messageTextForItem(item)
 
 	return text
@@ -104,7 +104,7 @@ func (c *SlackClient) SendItem(item *types.CraigslistItem) error {
 				Fallback: imageUrl,
 			})
 	}
-	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
+	level.Info(c.logger).Log("msg", "sending slack message for item "+item.Title)
 	c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForItem(item),
@@ -127,11 +127,10 @@ func (c *SlackClient) SendPriceDrop(priceDrop *types.PriceDrop) error {
 				Fallback: imageUrl,
 			})
 	}
-	level.Info(c.logger).Log("msg", "sending slack message for item " + item.Title)
+	level.Info(c.logger).Log("msg", "sending slack message for item "+item.Title)
 	c.sendSlackMessage(
 		&SlackMessage{
 			Text:        messageTextForPriceDrop(priceDrop),
 			Attachments: attachments})
 	return nil
 }
-

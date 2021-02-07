@@ -9,6 +9,7 @@ import (
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -79,7 +80,13 @@ func (s *imageScraper) GetImageUrls(ci *types.CraigslistItem) ([]string, error) 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		return nil, nil
+		buf, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, utils.WrapError("could not read http response from image from url: "+ci.Url, err)
+		}
+		body := string(buf)
+		return nil, utils.WrapError("could not get image from url: "+ci.Url,
+			fmt.Errorf("recieved non-200 status code fetching image from url %s, status code was %d, response was %s", ci.Url, resp.StatusCode, body))
 	}
 	urls := s.imageUrls(resp.Body)
 	return urls, nil

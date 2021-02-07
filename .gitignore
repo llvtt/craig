@@ -7,3 +7,10 @@ lambda.sh
 database.json
 .envrc
 .terraform
+.idea
+main
+main-dev
+*.tfstate
+*.tfstate.backup
+*.lock.hcl
+terraform/.terraform/*
