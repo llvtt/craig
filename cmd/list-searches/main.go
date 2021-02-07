@@ -15,9 +15,11 @@ type Search struct {
 	Created time.Time `dynamodbav:"created"`
 }
 
-var searchesClient db.DataAccess
-var sess *session.Session
-var dynamo *dynamodb.DynamoDB
+var (
+	searchesClient db.DataAccess
+	sess           *session.Session
+	dynamo         *dynamodb.DynamoDB
+)
 
 func init() {
 	sess = session.Must(session.NewSession())
@@ -26,13 +28,12 @@ func init() {
 }
 
 func handler(ctx context.Context) error {
-	searchIterator, err := searchesClient.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	var search Search
-	for err = searchIterator.Next(&search); err == nil; {
+	var (
+		search         Search
+		searchIterator db.Iterator
+		err            error
+	)
+	for searchIterator, err = searchesClient.List(ctx); err == nil; err = searchIterator.Next(&search) {
 		fmt.Printf("search: %+v", search)
 	}
 	if err != db.IteratorExhausted {

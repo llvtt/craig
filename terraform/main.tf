@@ -33,7 +33,7 @@ data "aws_ecr_image" "image" {
 resource "aws_lambda_function" "dynamo-test" {
   function_name = local.function_name
   package_type = "Image"
-  timeout = 300
+  timeout = 3
 
   role = aws_iam_role.iam_for_lambda.arn
 
