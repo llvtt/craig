@@ -7,3 +7,4 @@ lambda.sh
 database.json
 .envrc
 .terraform
+.idea
