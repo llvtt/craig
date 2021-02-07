@@ -82,7 +82,7 @@ type DynamoAccessIterator struct {
 }
 
 func (it *DynamoAccessIterator) Next(out interface{}) (err error) {
-	if it.position >= len(it.scannedItems) && err == nil {
+	if it.position >= len(it.scannedItems) {
 		err = IteratorExhausted
 	}
 
