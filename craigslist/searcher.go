@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/llvtt/craig/db"
 	"github.com/llvtt/craig/slack"
 	"github.com/llvtt/craig/types"
 	"github.com/llvtt/craig/utils"
@@ -19,7 +18,7 @@ type searcher struct {
 	craigslistClient CraigslistClient
 	imageScraper     ImageScraper
 	slackClient      *slack.SlackClient
-	dbClient         db.DBClient
+	//dbClient         db.DBClient
 	logger           log.Logger
 }
 
@@ -29,7 +28,7 @@ func NewSearcher(conf *types.CraigConfig, logger log.Logger) (Searcher, error) {
 	if err != nil {
 		return nil, utils.WrapError("could not initialize slack client", err)
 	}
-	dbClient, err := db.NewDBClient(conf, logger)
+	//dbClient, err := db.NewDBClient(conf, logger)
 	if err != nil {
 		return nil, utils.WrapError("could not initialize searcher", err)
 	}
@@ -41,7 +40,7 @@ func NewSearcher(conf *types.CraigConfig, logger log.Logger) (Searcher, error) {
 		craigslistClient: craigslistClient,
 		imageScraper: imageScraper,
 		slackClient: slackClient,
-		dbClient: dbClient,
+		//dbClient: dbClient,
 		logger: logger,
 	}, nil
 
@@ -68,23 +67,24 @@ func (s *searcher) Search() error {
 					level.Error(s.logger).Log("result was nil!")
 					continue
 				}
+				// TODO get this logic working again with the dynamodb db impl
 				//level.Debug(s.logger).Log("result", result)
-				inserted, err := s.dbClient.InsertSearchedItem(result)
-				if err != nil {
-					return utils.WrapError("could not insert searched item", err)
-				}
-				if inserted {
-					newResults = append(newResults, result)
-				}
-
-				// check for price drops
-				priceDrop, err := s.dbClient.InsertPrice(result)
-				if err != nil {
-					return utils.WrapError("could not insert price into db", err)
-				}
-				if priceDrop != nil {
-					priceDrops = append(priceDrops, priceDrop)
-				}
+				//inserted, err := s.dbClient.InsertSearchedItem(result)
+				//if err != nil {
+				//	return utils.WrapError("could not insert searched item", err)
+				//}
+				//if inserted {
+				//	newResults = append(newResults, result)
+				//}
+				//
+				//// check for price drops
+				//priceDrop, err := s.dbClient.InsertPrice(result)
+				//if err != nil {
+				//	return utils.WrapError("could not insert price into db", err)
+				//}
+				//if priceDrop != nil {
+				//	priceDrops = append(priceDrops, priceDrop)
+				//}
 			}
 
 

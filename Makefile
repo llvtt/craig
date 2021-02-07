@@ -6,14 +6,17 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 LINUXFLAGS=GOOS=linux GOARCH=amd64
 TERRAFORM_DIR=./terraform
-BINARY_NAME=main
+SLACK_EVENTS_BINARY_NAME=slack-events
+CLOUDWATCH_EVENTS_BINARY_NAME=cloudwatch-events
 
 all: test build
 build-dev: clean deps
-		$(GOBUILD) -o $(BINARY_NAME)-dev -v cmd/slack-events/main.go
+		$(GOBUILD) -o $(SLACK_EVENTS_BINARY_NAME)-dev -v cmd/slack-events/main.go
+		$(GOBUILD) -o $(CLOUDWATCH_EVENTS_BINARY_NAME)-dev -v cmd/cloudwatch-events/main.go
 
 build: clean deps
-		$(LINUXFLAGS) $(GOBUILD) -o $(BINARY_NAME) -v cmd/slack-events/main.go
+		$(LINUXFLAGS) $(GOBUILD) -o $(SLACK_EVENTS_BINARY_NAME) -v cmd/slack-events/main.go
+		$(LINUXFLAGS) $(GOBUILD) -o $(CLOUDWATCH_EVENTS_BINARY_NAME) -v cmd/cloudwatch-events/main.go
 
 test:
 		$(GOTEST) -v ./...
@@ -41,7 +44,7 @@ docker--set-tag-name:
 
 docker-push: docker-build docker--set-tag-name
 		docker tag "craig:latest" "${ECR_HOSTNAME}/craig:${tag_name}"
-		aws ecr get-login-password | docker login --username AWS --password-stdin ${ECR_HOSTNAME}
+		docker run --rm -it -e AWS_DEFAULT_REGION -e  AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY amazon/aws-cli ecr get-login-password | docker login --username AWS --password-stdin ${ECR_HOSTNAME}
 		docker push "${ECR_HOSTNAME}/craig:${tag_name}"
 
 deploy-plan: docker--set-tag-name
