@@ -4,16 +4,16 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
-BINARY_NAME=main
 LINUXFLAGS=GOOS=linux GOARCH=amd64
 TERRAFORM_DIR=./terraform
+BINARY_NAME=main
 
 all: test build
 build-dev: clean deps
-		$(GOBUILD) -o $(BINARY_NAME)-dev -v cmd/dynamo/main.go
+		$(GOBUILD) -o $(BINARY_NAME)-dev -v cmd/list-searches/main.go
 
 build: clean deps
-		$(LINUXFLAGS) $(GOBUILD) -o $(BINARY_NAME) -v cmd/dynamo/main.go
+		$(LINUXFLAGS) $(GOBUILD) -o $(BINARY_NAME) -v cmd/list-searches/main.go
 
 test:
 		$(GOTEST) -v ./...
