@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/go-kit/kit/log"
+	"github.com/llvtt/craig/craigslist"
+	"github.com/llvtt/craig/types"
+	"os"
 )
 
 type Handler struct {
 }
 
-func (h Handler) Invoke(ctx context.Context, event []byte) ([]byte, error) {
+func (h Handler) Invoke(ctx context.Context, event []byte) (result []byte, err error) {
 	// scrape craigslist trigger event looks like:
 	/*
 		map[account:860626312307
@@ -25,14 +29,31 @@ func (h Handler) Invoke(ctx context.Context, event []byte) ([]byte, error) {
 		    version:0
 		]
 	*/
+	var logger log.Logger
+	logger = log.NewJSONLogger(os.Stdout)
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+
 	var cloudWatchEvent events.CloudWatchEvent
-	if err := json.Unmarshal(event, &cloudWatchEvent); err == nil {
-		fmt.Println(cloudWatchEvent)
-		str := "it works!"
-		return []byte(str), nil
-	} else {
+	if err := json.Unmarshal(event, &cloudWatchEvent); err != nil {
 		return nil, fmt.Errorf("unrecognized event type: %v", event)
 	}
+
+	// TODO: load this from DB instead of hard coding here
+	config := &types.CraigConfig{
+		Region: "sfc",
+		Searches: []types.CraigslistSearch{
+			{Category: "zip", Terms: []string{}, Neighborhoods: []int{3}},
+			{Category: "ata", Terms: []string{"end table", "lamp", "mirror", "queen bed"}},
+		},
+	}
+	searcher, err := craigslist.NewSearcher(config, logger)
+	if err != nil {
+		return
+	}
+
+	err = searcher.Search(ctx)
+
+	return
 }
 
 ////////////

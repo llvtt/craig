@@ -10,11 +10,12 @@ resource "aws_lambda_function" "scrape_craig_lambda" {
 
   image_uri = "${var.image_uri}:${var.tag_name}"
 
-//  environment {
-//    variables = {
-//      CRAIG_SLACK_ENDPOINT = var.slack_endpoint
-//    }
-//  }
+  environment {
+    variables = {
+      "SLACK_ACCESS_TOKEN" : var.slack_access_token,
+      "SLACK_SIGNING_SECRET" : var.slack_signing_secret,
+    }
+  }
 
   depends_on = [aws_iam_role_policy_attachment.lambda_logs, aws_cloudwatch_log_group.allow_cloudwatch]
 }

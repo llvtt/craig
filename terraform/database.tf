@@ -9,6 +9,28 @@ resource "aws_dynamodb_table" "searches" {
   }
 }
 
+resource "aws_dynamodb_table" "items" {
+  name           = "items"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "url"
+
+  attribute {
+    name = "url"
+    type = "S"
+  }
+}
+
+resource "aws_dynamodb_table" "price_logs" {
+  name           = "price_logs"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "item_url"
+
+  attribute {
+    name = "item_url"
+    type = "S"
+  }
+}
+
 data "aws_iam_policy_document" "dynamodb_policy_document" {
   statement {
     actions = [
@@ -22,7 +44,9 @@ data "aws_iam_policy_document" "dynamodb_policy_document" {
     ]
 
     resources = [
-      aws_dynamodb_table.searches.arn
+      aws_dynamodb_table.searches.arn,
+      aws_dynamodb_table.items.arn,
+      aws_dynamodb_table.price_logs.arn
     ]
   }
 }

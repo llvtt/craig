@@ -18,20 +18,24 @@ type CraigConfig struct {
 }
 
 type CraigslistItem struct {
-	Url          string    `json:"url",db:"url"`
-	Title        string    `json:"title",db:"title"`
-	Description  string    `json:"description",db:"description"`
-	ThumbnailUrl string    `json:"thumbnail_url",db:"thumbnail_url"`
-	IndexDate    time.Time `json:"index_date",db:"index_date"`
-	PublishDate  time.Time `json:"publish_date",db:"publish_date"`
-	Price        int       `json:"price",db:"price"`
+	Url          string    `json:"url" dynamodbav:"url"`
+	Title        string    `json:"title" dynamodbav:"title"`
+	Description  string    `json:"description" dynamodbav:"description"`
+	ThumbnailUrl string    `json:"thumbnail_url" dynamodbav:"thumbnail_url"`
+	IndexDate    time.Time `json:"index_date" dynamodbav:"index_date"`
+	PublishDate  time.Time `json:"publish_date" dynamodbav:"publish_date"`
+	Price        int       `json:"price" dynamodbav:"price"`
+}
+
+type CraigslistPriceLogGet struct {
+	ItemUrl      string                  `json:"item_url" dynamodbav:"item_url"`
 }
 
 type CraigslistPriceLog struct {
-	Item         *CraigslistItem         `json:"item"`
-	Prices       []*CraigslistPriceEntry `json:"prices"`
-	MaxPrice     int                     `json:"max_price_cents"`
-	CurrentPrice int                     `json:"current_price_cents"`
+	ItemUrl      string                  `json:"item_url" dynamodbav:"item_url"`
+	Prices       []*CraigslistPriceEntry `json:"prices" dynamodbav:"prices"`
+	MaxPrice     int                     `json:"max_price_cents" dynamodbav:"max_price_cents"`
+	CurrentPrice int                     `json:"current_price_cents" dynamodbav:"current_price_cents"`
 }
 
 type CraigslistPriceEntry struct {
