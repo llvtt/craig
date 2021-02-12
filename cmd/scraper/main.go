@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/llvtt/craig/craigslist"
@@ -35,7 +36,7 @@ func (craig *Craig) Run() error {
 		if upsertErr := craig.db.Table("items").Upsert(craig.ctx, item, &previousItem); upsertErr != nil {
 			return upsertErr
 		}
-		if !previousItem.IsEmpty() {
+		if previousItem.IsEmpty() {
 			newItemCount++
 		}
 	}

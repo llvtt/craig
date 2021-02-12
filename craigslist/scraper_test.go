@@ -1,9 +1,25 @@
 package craigslist
 
 import (
+	"io"
+	"os"
+	"path"
 	"strings"
 	"testing"
 )
+
+func clTestFixture() io.Reader {
+	projectRoot, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	fixturePath := path.Join(projectRoot, "test", "craigslist-result-page.html")
+	file, err := os.Open(fixturePath)
+	if err != nil {
+		panic(err)
+	}
+	return file
+}
 
 func TestConstructURL(t *testing.T) {
 	testCases := []struct {

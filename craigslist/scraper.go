@@ -115,28 +115,9 @@ func (s *HTMLScraper) throttle() {
 	}
 }
 
-func (s *HTMLScraper) fillNextPage(startIndex int, it *ItemIterator) error {
-	s.throttle()
-
-	log.Println("fetching page at index", startIndex)
-
-	requestURL := constructURL(map[string]interface{}{
-		"s":     startIndex,
-		"query": "mountain bike",
-	})
-	request, err := http.NewRequest(http.MethodGet, requestURL, http.NoBody)
-	res, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		body, _ := ioutil.ReadAll(res.Body)
-		return fmt.Errorf("unsuccessful request response: %d %s", res.StatusCode, string(body))
-	}
-
+func parseItems(reader io.Reader, it *ItemIterator) error {
 	var doc *goquery.Document
-	if decoded, err := decodeHTMLBody(res.Body); err != nil {
+	if decoded, err := decodeHTMLBody(reader); err != nil {
 		return err
 	} else {
 		doc, err = goquery.NewDocumentFromReader(decoded)
@@ -168,6 +149,30 @@ func (s *HTMLScraper) fillNextPage(startIndex int, it *ItemIterator) error {
 	}
 
 	return nil
+}
+
+func (s *HTMLScraper) fillNextPage(startIndex int, it *ItemIterator) error {
+	s.throttle()
+
+	log.Println("fetching page at index", startIndex)
+
+	requestURL := constructURL(map[string]interface{}{
+		"s":     startIndex,
+		"query": "mountain bike",
+	})
+	request, err := http.NewRequest(http.MethodGet, requestURL, http.NoBody)
+	res, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(res.Body)
+		return fmt.Errorf("unsuccessful request response: %d %s", res.StatusCode, string(body))
+	}
+
+	return parseItems(res.Body, it)
 }
 
 func (s *HTMLScraper) Scrape() Iterator {
