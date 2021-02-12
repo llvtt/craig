@@ -27,6 +27,10 @@ type CraigslistItem struct {
 	Price        int       `json:"price",db:"price"`
 }
 
+func (item *CraigslistItem) IsEmpty() bool {
+	return item.Url == "" && item.Title == ""
+}
+
 type CraigslistPriceLog struct {
 	Item         *CraigslistItem         `json:"item"`
 	Prices       []*CraigslistPriceEntry `json:"prices"`
@@ -47,4 +51,3 @@ type PriceDrop struct {
 	PreviousPricePublishDate time.Time
 	MaxPricePublishDate      time.Time
 }
-

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"github.com/llvtt/craig/internal/util"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -15,19 +16,23 @@ type DynamoDBAccess struct {
 	Client    *dynamodb.DynamoDB
 }
 
+type DataAccessManager interface {
+	Table(string) DataAccess
+}
+
 type DynamoDBAccessManager struct {
 	client *dynamodb.DynamoDB
 }
 
-func NewDynamoDBAccessManager(client *dynamodb.DynamoDB) *DynamoDBAccessManager {
+func NewDynamoDBAccessManager(client *dynamodb.DynamoDB) DataAccessManager {
 	return &DynamoDBAccessManager{client}
 }
 
-func (mgr *DynamoDBAccessManager) Table(tableName string) *DynamoDBAccess {
+func (mgr *DynamoDBAccessManager) Table(tableName string) DataAccess {
 	return &DynamoDBAccess{tableName, mgr.client}
 }
 
-func (acc *DynamoDBAccess) List(ctx context.Context) (it Iterator, err error) {
+func (acc *DynamoDBAccess) List(ctx context.Context) (it util.Iterator, err error) {
 	input := &dynamodb.ScanInput{TableName: aws.String(acc.TableName)}
 
 	var docs []map[string]*dynamodb.AttributeValue
@@ -83,7 +88,7 @@ type DynamoAccessIterator struct {
 
 func (it *DynamoAccessIterator) Next(out interface{}) (err error) {
 	if it.position >= len(it.scannedItems) {
-		err = IteratorExhausted
+		err = util.IteratorExhausted
 	}
 
 	if it.position < len(it.scannedItems) {

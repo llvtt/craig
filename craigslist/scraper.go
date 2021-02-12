@@ -1,0 +1,233 @@
+package craigslist
+
+import (
+	"bufio"
+	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	"github.com/llvtt/craig/types"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding/htmlindex"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+)
+
+const (
+	craigslistUrl    = "https://sfbay.craigslist.org/search/sfc/bia"
+	timeFormat       = "2006-01-02 15:04"
+	throttleDuration = 10 * time.Second
+)
+
+type iterationError string
+
+func (ie iterationError) Error() string {
+	return string(ie)
+}
+
+// IteratorExhausted is returned when an Iterator has reached the end of its documents.
+const IteratorExhausted iterationError = "iterator exhausted"
+
+type Iterator interface {
+	// Return the next CraigslistItem or nil (only if error is set)
+	// Error will be IteratorExhausted when there are no more results.
+	// for item, err := it.Next(); err != nil; item, err := it.Next() {
+	//     // do stuff with item
+	// }
+	// if err != IteratorExhausted {
+	//     // some shit went down
+	// }
+	Next() (*types.CraigslistItem, error)
+}
+
+// HTML-based scraper for Craigslist
+type HTMLScraper struct {
+	// Starting index of results on the current craigslist page
+	pageResultsStartIndex int
+	// Ticker for use in self-throttling
+	ticker *time.Ticker
+}
+
+func NewScraper() *HTMLScraper {
+	return new(HTMLScraper)
+}
+
+type ItemIterator struct {
+	// Current position in currentResults
+	currentResultIndex int
+	// The index of the next item to request
+	nextItemIndex int
+	// Slice of craigslist items for the current page
+	currentResults []*types.CraigslistItem
+	// Reference to the scraper, for lazy-loading next page results.
+	scraper *HTMLScraper
+}
+
+func (it *ItemIterator) Next() (item *types.CraigslistItem, err error) {
+	if it.currentResultIndex >= len(it.currentResults) {
+		// fetch more results
+		if err = it.scraper.fillNextPage(it.nextItemIndex, it); err != nil {
+			return
+		}
+	}
+
+	if it.currentResultIndex < len(it.currentResults) {
+		item = it.currentResults[it.currentResultIndex]
+		it.currentResultIndex++
+		log.Println("currentResultIndex", it.currentResultIndex)
+	}
+
+	return
+}
+
+func constructURL(params map[string]interface{}) string {
+	var queryString strings.Builder
+	queryString.WriteString(craigslistUrl)
+
+	if len(params) > 0 {
+		queryString.WriteString("?")
+		index := 0
+		for name, value := range params {
+			queryString.WriteString(url.QueryEscape(name))
+			queryString.WriteString("=")
+			queryString.WriteString(url.QueryEscape(fmt.Sprint(value)))
+			if index+1 < len(params) {
+				queryString.WriteString("&")
+				index++
+			}
+		}
+	}
+
+	return queryString.String()
+}
+
+func (s *HTMLScraper) throttle() {
+	if s.ticker == nil {
+		s.ticker = time.NewTicker(throttleDuration)
+	} else {
+		log.Println("throttling")
+		t := <-s.ticker.C
+		log.Println("awakened from throttle at", t)
+	}
+}
+
+func (s *HTMLScraper) fillNextPage(startIndex int, it *ItemIterator) error {
+	s.throttle()
+
+	log.Println("fetching page at index", startIndex)
+
+	requestURL := constructURL(map[string]interface{}{
+		"s":     startIndex,
+		"query": "mountain bike",
+	})
+	request, err := http.NewRequest(http.MethodGet, requestURL, http.NoBody)
+	res, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(res.Body)
+		return fmt.Errorf("unsuccessful request response: %d %s", res.StatusCode, string(body))
+	}
+
+	var doc *goquery.Document
+	if decoded, err := decodeHTMLBody(res.Body); err != nil {
+		return err
+	} else {
+		doc, err = goquery.NewDocumentFromReader(decoded)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Find the review items
+	var results []*types.CraigslistItem
+	resultRows := doc.Find(".result-row")
+	resultCount := len(resultRows.Nodes)
+	resultRows.Each(func(i int, s *goquery.Selection) {
+		item, err := parseItem(s)
+		if err != nil {
+			log.Println("error", err.Error())
+		}
+		if item != nil {
+			results = append(results, item)
+		}
+	})
+
+	it.currentResults = results
+	it.currentResultIndex = 0
+	if resultCount == 0 {
+		return IteratorExhausted
+	} else {
+		it.nextItemIndex += resultCount
+	}
+
+	return nil
+}
+
+func (s *HTMLScraper) Scrape() Iterator {
+	return &ItemIterator{scraper: s}
+}
+
+// https://github.com/PuerkitoBio/goquery/wiki/Tips-and-tricks
+func detectContentCharset(body io.Reader) string {
+	r := bufio.NewReader(body)
+	if data, err := r.Peek(1024); err == nil {
+		if _, name, ok := charset.DetermineEncoding(data, ""); ok {
+			return name
+		}
+	}
+	return "utf-8"
+}
+
+// DecodeHTMLBody returns an decoding reader of the html Body for the specified `charset`
+// If `charset` is empty, DecodeHTMLBody tries to guess the encoding from the content
+// https://github.com/PuerkitoBio/goquery/wiki/Tips-and-tricks
+func decodeHTMLBody(body io.Reader) (io.Reader, error) {
+	contentCharset := detectContentCharset(body)
+	e, err := htmlindex.Get(contentCharset)
+	if err != nil {
+		return nil, err
+	}
+	if name, _ := htmlindex.Name(e); name != "utf-8" {
+		body = e.NewDecoder().Reader(body)
+	}
+	return body, nil
+}
+
+func parseItem(s *goquery.Selection) (item *types.CraigslistItem, err error) {
+	if s.Length() != 1 {
+		return nil, fmt.Errorf("WARN - result row has %d children (only 1 expected)", s.Length())
+	}
+	//resultRowNode := s.Get(0)
+	item = new(types.CraigslistItem)
+
+	//for _, attr := range resultRowNode.Attr {
+	//	switch attr.Key {
+	//	case "data-repost-of":
+	//		item.RepostID = attr.Val
+	//	case "data-pid":
+	//		item.PostID = attr.Val
+	//	}
+	//}
+
+	item.Url = s.Find("a").AttrOr("href", "")
+	resultInfo := s.Find(".result-info")
+
+	if timeString, ok := resultInfo.Find(".result-date").Attr("datetime"); ok {
+		item.PublishDate, err = time.Parse(timeFormat, timeString)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	item.Title = resultInfo.Find(".result-heading .result-title").Text()
+	item.Price, err = strconv.Atoi(resultInfo.Find(".result-meta .result-price").Text())
+
+	return item, nil
+}
