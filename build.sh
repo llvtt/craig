@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TARGETS=(\
-         # slack-events\
+         slack-events\
              scraper\
     )
 LINUXFLAGS=GOOS=linux GOARCH=amd64

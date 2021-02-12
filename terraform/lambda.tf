@@ -1,13 +1,23 @@
+locals {
+  lambda_zip_path = "${path.module}/slack-events.zip"
+}
+
+data "archive_file" "slack_events" {
+  type        = "zip"
+  source_file = "${path.module}/../slack-events"
+  output_path = local.lambda_zip_path
+}
+
 // slack-events responds to events driven from Slack through API Gateway
 resource "aws_lambda_function" "slack-events" {
-  function_name = "slack-events"
-  timeout       = 5
-  runtime       = "go1.x"
-  handler       = "slack-events"
+  function_name    = "slack-events"
+  timeout          = 5
+  runtime          = "go1.x"
+  handler          = "slack-events"
+  filename         = local.lambda_zip_path
+  source_code_hash = data.archive_file.slack_events.output_base64sha256
 
   role = aws_iam_role.iam_for_lambda.arn
-
-  image_uri = "${var.image_uri}:${var.tag_name}"
 
   environment {
     variables = {

@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	slackbot "github.com/llvtt/craig/slack"
 	"os"
 	"time"
+
+	"github.com/llvtt/craig/internal/util"
+	slackbot "github.com/llvtt/craig/slack"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -25,7 +27,7 @@ const (
 
 var (
 	sess           *session.Session
-	tableMgr       *db.DynamoDBAccessManager
+	tableMgr       db.DataAccessManager
 	searchesClient db.DataAccess
 
 	slacker *slackbot.Slacker
@@ -51,7 +53,7 @@ func init() {
 func handler(ctx context.Context, req events.APIGatewayProxyRequest) error {
 	var (
 		search         Search
-		searchIterator db.Iterator
+		searchIterator util.Iterator
 		err            error
 	)
 
@@ -66,7 +68,7 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) error {
 	for searchIterator, err = searchesClient.List(ctx); err == nil; err = searchIterator.Next(&search) {
 		fmt.Printf("search: %+v", search)
 	}
-	if err != db.IteratorExhausted {
+	if err != util.IteratorExhausted {
 		return err
 	}
 
