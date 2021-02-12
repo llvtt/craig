@@ -10,4 +10,6 @@ type DataAccess interface {
 	List(context.Context) (util.Iterator, error)
 	// Upsert upserts the `input` record and unmarshalls any overwritten record into `output`.
 	Upsert(ctx context.Context, input interface{}, output ...interface{}) error
+	// Get returns a record
+	Get(ctx context.Context, input interface{}, output interface{}) error
 }

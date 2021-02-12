@@ -18,3 +18,7 @@ variable "slack_access_token" {
 variable "slack_signing_secret" {
   description = "Slack signing secret"
 }
+
+variable "craig_slack_endpoint" {
+  description = "legacy webhook slack endpoint. TODO remove"
+}

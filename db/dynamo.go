@@ -46,6 +46,29 @@ func (acc *DynamoDBAccess) List(ctx context.Context) (it util.Iterator, err erro
 	return
 }
 
+func (acc *DynamoDBAccess) Get(ctx context.Context, input interface{}, record interface{}) (err error) {
+	item, err := dynamodbattribute.MarshalMap(input)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(fmt.Sprintf("getting item %v\n", item))
+	output, err := acc.Client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
+		TableName:    aws.String(acc.TableName),
+		Key: item,
+	})
+
+	if err != nil || output.Item == nil {
+		return err
+	}
+
+	if err = dynamodbattribute.UnmarshalMap(output.Item, record); err != nil {
+		return err
+	}
+
+	return
+}
+
 func (acc *DynamoDBAccess) Upsert(ctx context.Context, record interface{}, previousRecord ...interface{}) error {
 	if len(previousRecord) > 1 {
 		return fmt.Errorf("up to one previousRecord may be provided, got %d", len(previousRecord))
