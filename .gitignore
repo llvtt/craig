@@ -14,3 +14,5 @@ main-dev
 *.tfstate.backup
 *.lock.hcl
 terraform/.terraform/*
+scraper
+slack-events
