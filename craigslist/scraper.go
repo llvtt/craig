@@ -190,15 +190,6 @@ func parseItem(s *goquery.Selection) (item *types.CraigslistItem, err error) {
 	}
 	item = new(types.CraigslistItem)
 
-	//for _, attr := range resultRowNode.Attr {
-	//	switch attr.Key {
-	//	case "data-repost-of":
-	//		item.RepostID = attr.Val
-	//	case "data-pid":
-	//		item.PostID = attr.Val
-	//	}
-	//}
-
 	item.Url = s.Find("a").AttrOr("href", "")
 	resultInfo := s.Find(".result-info")
 

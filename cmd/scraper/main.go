@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -29,9 +30,11 @@ func (craig *Craig) Run() error {
 		newItemCount int
 	)
 
+	indexDate := time.Now()
 	scraper := craigslist.NewScraper()
 	for item, err = scraper.Next(); err == nil; item, err = scraper.Next() {
 		var previousItem types.CraigslistItem
+		item.IndexDate = indexDate
 		if upsertErr := craig.db.Table("items").Upsert(craig.ctx, item, &previousItem); upsertErr != nil {
 			return upsertErr
 		}
