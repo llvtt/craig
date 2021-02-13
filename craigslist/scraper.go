@@ -23,6 +23,10 @@ const (
 	throttleDuration = 10 * time.Second
 )
 
+type CraigslistScraper interface {
+	Next() (*types.CraigslistItem, error)
+}
+
 type iterationError string
 
 func (ie iterationError) Error() string {
