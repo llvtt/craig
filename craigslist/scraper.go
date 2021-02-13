@@ -56,6 +56,7 @@ func (scraper *HTMLScraper) Next() (item *types.CraigslistItem, err error) {
 		if err = scraper.getNextPage(); err != nil {
 			return
 		}
+		scraper.currentResultIndex = 0
 	}
 
 	if scraper.currentResultIndex < len(scraper.currentResults) {
@@ -99,6 +100,31 @@ func (scraper *HTMLScraper) throttle() {
 	}
 }
 
+func parseItem(s *goquery.Selection) (item *types.CraigslistItem, err error) {
+	if s.Length() != 1 {
+		return nil, fmt.Errorf("WARN - result row has %d children (only 1 expected)", s.Length())
+	}
+	item = new(types.CraigslistItem)
+
+	item.Url = s.Find("a").AttrOr("href", "")
+	resultInfo := s.Find(".result-info")
+
+	if timeString, ok := resultInfo.Find(".result-date").Attr("datetime"); ok {
+		item.PublishDate, err = time.Parse(timeFormat, timeString)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	item.Title = resultInfo.Find(".result-heading .result-title").Text()
+	priceString := strings.TrimPrefix(resultInfo.Find(".result-meta .result-price").Text(), "$")
+	item.Price, err = strconv.Atoi(priceString)
+	// Convert to cents
+	item.Price *= 100
+
+	return item, nil
+}
+
 func (scraper *HTMLScraper) parseItems(reader io.Reader) (results []*types.CraigslistItem, resultsCount int, err error) {
 	var doc *goquery.Document
 	var decoded io.Reader
@@ -111,7 +137,6 @@ func (scraper *HTMLScraper) parseItems(reader io.Reader) (results []*types.Craig
 		}
 	}
 
-	//resultRows := doc.Find(".result-row").PrevUntil("h4.nearby")
 	firstResult := doc.Find(".result-row").First()
 	resultRows := firstResult.AddSelection(firstResult.NextUntil(".nearby"))
 	resultsCount = len(resultRows.Nodes)
@@ -144,16 +169,18 @@ func (scraper *HTMLScraper) getNextPage() error {
 	request, err := http.NewRequest(http.MethodGet, requestURL, http.NoBody)
 	res, err := http.DefaultClient.Do(request)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(res.Body)
 		return fmt.Errorf("unsuccessful request response: %d %s", res.StatusCode, string(body))
 	}
 
-	scraper.currentResults, scraper.nextItemIndex, err = scraper.parseItems(res.Body)
+	var resultCount int
+	scraper.currentResults, resultCount, err = scraper.parseItems(res.Body)
+	scraper.nextItemIndex += resultCount
 
 	return err
 }
@@ -182,29 +209,4 @@ func decodeHTMLBody(body io.Reader) (io.Reader, error) {
 		body = e.NewDecoder().Reader(body)
 	}
 	return body, nil
-}
-
-func parseItem(s *goquery.Selection) (item *types.CraigslistItem, err error) {
-	if s.Length() != 1 {
-		return nil, fmt.Errorf("WARN - result row has %d children (only 1 expected)", s.Length())
-	}
-	item = new(types.CraigslistItem)
-
-	item.Url = s.Find("a").AttrOr("href", "")
-	resultInfo := s.Find(".result-info")
-
-	if timeString, ok := resultInfo.Find(".result-date").Attr("datetime"); ok {
-		item.PublishDate, err = time.Parse(timeFormat, timeString)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	item.Title = resultInfo.Find(".result-heading .result-title").Text()
-	priceString := strings.TrimPrefix(resultInfo.Find(".result-meta .result-price").Text(), "$")
-	item.Price, err = strconv.Atoi(priceString)
-	// Convert to cents
-	item.Price *= 100
-
-	return item, nil
 }
