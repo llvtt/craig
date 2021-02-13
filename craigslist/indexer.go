@@ -2,45 +2,33 @@ package craigslist
 
 import (
 	"context"
-	"fmt"
 	"github.com/llvtt/craig/db"
-	"github.com/llvtt/craig/internal/util"
 	"github.com/llvtt/craig/types"
 	"time"
 )
 
-type Indexer interface{}
+type Indexer interface {
+	// Index a CraigslistItem
+	// Return true if the item was new, and any error
+	Index(item *types.CraigslistItem) (bool, error)
+}
 
 type DynamoDBIndexer struct {
-	mgr db.DataAccessManager
+	access db.DataAccess
 }
 
-func NewDynamoDBIndexer(mgr db.DataAccessManager) *DynamoDBIndexer {
-	return &DynamoDBIndexer{mgr}
+func NewDynamoDBIndexer(acc db.DataAccess) *DynamoDBIndexer {
+	return &DynamoDBIndexer{acc}
 }
 
-func (idx *DynamoDBIndexer) Index(ctx context.Context, scraper CraigslistScraper) error {
-	var (
-		err          error
-		item         *types.CraigslistItem
-		newItemCount int
-	)
+func (idx *DynamoDBIndexer) Index(ctx context.Context, item *types.CraigslistItem) (newRecord bool, err error) {
+	item.IndexDate = time.Now()
 
-	indexDate := time.Now()
-	for item, err = scraper.Next(); err == nil; item, err = scraper.Next() {
-		var previousItem types.CraigslistItem
-		item.IndexDate = indexDate
-		if upsertErr := idx.mgr.Table("items").Upsert(ctx, item, &previousItem); upsertErr != nil {
-			return upsertErr
-		}
-		if previousItem.IsEmpty() {
-			newItemCount++
-		}
-	}
-	if err != util.IteratorExhausted {
-		return err
+	var previousItem types.CraigslistItem
+	if err = idx.access.Upsert(ctx, item, &previousItem); err != nil {
+		return
 	}
 
-	fmt.Println("new item count", newItemCount)
-	return nil
+	newRecord = previousItem.IsEmpty()
+	return
 }

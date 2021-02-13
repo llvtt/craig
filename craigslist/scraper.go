@@ -168,7 +168,7 @@ func (scraper *HTMLScraper) getNextPage() error {
 
 	requestURL := constructURL(map[string]interface{}{
 		"s":     scraper.nextItemIndex,
-		"query": "mountain bike",
+		"query": "lamp",
 	})
 	request, err := http.NewRequest(http.MethodGet, requestURL, http.NoBody)
 	res, err := http.DefaultClient.Do(request)
