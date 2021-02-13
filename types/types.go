@@ -1,6 +1,7 @@
 package types
 
 import (
+	"strings"
 	"time"
 )
 
@@ -28,11 +29,28 @@ type CraigslistItem struct {
 }
 
 type CraigslistPriceLogGet struct {
-	ItemUrl      string                  `json:"item_url" dynamodbav:"item_url"`
+	ItemUrl string `json:"item_url" dynamodbav:"item_url"`
 }
 
 func (item *CraigslistItem) IsEmpty() bool {
-	return item.Url == "" && item.Title == ""
+	return item.Url == ""
+}
+
+func (item *CraigslistItem) String() string {
+	var builder strings.Builder
+	builder.WriteString("CraigslistItem{")
+	hostAndPath := strings.SplitN(strings.TrimPrefix(item.Url, "https://"), "/", 2)
+	builder.WriteString("path=/")
+	builder.WriteString(hostAndPath[1])
+	builder.WriteString(", ")
+	builder.WriteString("title=")
+	builder.WriteString(item.Title)
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func (item *CraigslistItem) Equals(other *CraigslistItem) bool {
+	return item.Url == other.Url
 }
 
 type CraigslistPriceLog struct {

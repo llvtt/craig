@@ -30,8 +30,7 @@ func (craig *Craig) Run() error {
 	)
 
 	scraper := craigslist.NewScraper()
-	items := scraper.Scrape()
-	for item, err = items.Next(); err == nil; item, err = items.Next() {
+	for item, err = scraper.Next(); err == nil; item, err = scraper.Next() {
 		var previousItem types.CraigslistItem
 		if upsertErr := craig.db.Table("items").Upsert(craig.ctx, item, &previousItem); upsertErr != nil {
 			return upsertErr

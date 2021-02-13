@@ -32,53 +32,36 @@ func (ie iterationError) Error() string {
 // IteratorExhausted is returned when an Iterator has reached the end of its documents.
 const IteratorExhausted iterationError = "iterator exhausted"
 
-type Iterator interface {
-	// Return the next CraigslistItem or nil (only if error is set)
-	// Error will be IteratorExhausted when there are no more results.
-	// for item, err := it.Next(); err != nil; item, err := it.Next() {
-	//     // do stuff with item
-	// }
-	// if err != IteratorExhausted {
-	//     // some shit went down
-	// }
-	Next() (*types.CraigslistItem, error)
-}
-
 // HTML-based scraper for Craigslist
 type HTMLScraper struct {
 	// Starting index of results on the current craigslist page
 	pageResultsStartIndex int
 	// Ticker for use in self-throttling
 	ticker *time.Ticker
-}
-
-func NewScraper() *HTMLScraper {
-	return new(HTMLScraper)
-}
-
-type ItemIterator struct {
 	// Current position in currentResults
 	currentResultIndex int
 	// The index of the next item to request
 	nextItemIndex int
 	// Slice of craigslist items for the current page
 	currentResults []*types.CraigslistItem
-	// Reference to the scraper, for lazy-loading next page results.
-	scraper *HTMLScraper
 }
 
-func (it *ItemIterator) Next() (item *types.CraigslistItem, err error) {
-	if it.currentResultIndex >= len(it.currentResults) {
+func NewScraper() *HTMLScraper {
+	return new(HTMLScraper)
+}
+
+func (scraper *HTMLScraper) Next() (item *types.CraigslistItem, err error) {
+	if scraper.currentResultIndex >= len(scraper.currentResults) {
 		// fetch more results
-		if err = it.scraper.fillNextPage(it.nextItemIndex, it); err != nil {
+		if err = scraper.getNextPage(); err != nil {
 			return
 		}
 	}
 
-	if it.currentResultIndex < len(it.currentResults) {
-		item = it.currentResults[it.currentResultIndex]
-		it.currentResultIndex++
-		log.Println("currentResultIndex", it.currentResultIndex)
+	if scraper.currentResultIndex < len(scraper.currentResults) {
+		item = scraper.currentResults[scraper.currentResultIndex]
+		scraper.currentResultIndex++
+		log.Println("currentResultIndex", scraper.currentResultIndex)
 	}
 
 	return
@@ -105,33 +88,35 @@ func constructURL(params map[string]interface{}) string {
 	return queryString.String()
 }
 
-func (s *HTMLScraper) throttle() {
-	if s.ticker == nil {
-		s.ticker = time.NewTicker(throttleDuration)
+func (scraper *HTMLScraper) throttle() {
+	if scraper.ticker == nil {
+		// First iteration does not block
+		scraper.ticker = time.NewTicker(throttleDuration)
 	} else {
 		log.Println("throttling")
-		t := <-s.ticker.C
+		t := <-scraper.ticker.C
 		log.Println("awakened from throttle at", t)
 	}
 }
 
-func parseItems(reader io.Reader, it *ItemIterator) error {
+func (scraper *HTMLScraper) parseItems(reader io.Reader) (results []*types.CraigslistItem, resultsCount int, err error) {
 	var doc *goquery.Document
-	if decoded, err := decodeHTMLBody(reader); err != nil {
-		return err
+	var decoded io.Reader
+	if decoded, err = decodeHTMLBody(reader); err != nil {
+		return
 	} else {
 		doc, err = goquery.NewDocumentFromReader(decoded)
 		if err != nil {
-			log.Fatal(err)
+			return
 		}
 	}
 
-	// Find the review items
-	var results []*types.CraigslistItem
-	resultRows := doc.Find(".result-row")
-	resultCount := len(resultRows.Nodes)
-	resultRows.Each(func(i int, s *goquery.Selection) {
-		item, err := parseItem(s)
+	//resultRows := doc.Find(".result-row").PrevUntil("h4.nearby")
+	firstResult := doc.Find(".result-row").First()
+	resultRows := firstResult.AddSelection(firstResult.NextUntil(".nearby"))
+	resultsCount = len(resultRows.Nodes)
+	resultRows.Each(func(_ int, selectedNode *goquery.Selection) {
+		item, err := parseItem(selectedNode.First())
 		if err != nil {
 			log.Println("error", err.Error())
 		}
@@ -140,24 +125,20 @@ func parseItems(reader io.Reader, it *ItemIterator) error {
 		}
 	})
 
-	it.currentResults = results
-	it.currentResultIndex = 0
-	if resultCount == 0 {
-		return IteratorExhausted
-	} else {
-		it.nextItemIndex += resultCount
+	if resultsCount == 0 {
+		err = IteratorExhausted
 	}
 
-	return nil
+	return
 }
 
-func (s *HTMLScraper) fillNextPage(startIndex int, it *ItemIterator) error {
-	s.throttle()
+func (scraper *HTMLScraper) getNextPage() error {
+	scraper.throttle()
 
-	log.Println("fetching page at index", startIndex)
+	log.Println("fetching page at index", scraper.nextItemIndex)
 
 	requestURL := constructURL(map[string]interface{}{
-		"s":     startIndex,
+		"s":     scraper.nextItemIndex,
 		"query": "mountain bike",
 	})
 	request, err := http.NewRequest(http.MethodGet, requestURL, http.NoBody)
@@ -172,11 +153,9 @@ func (s *HTMLScraper) fillNextPage(startIndex int, it *ItemIterator) error {
 		return fmt.Errorf("unsuccessful request response: %d %s", res.StatusCode, string(body))
 	}
 
-	return parseItems(res.Body, it)
-}
+	scraper.currentResults, scraper.nextItemIndex, err = scraper.parseItems(res.Body)
 
-func (s *HTMLScraper) Scrape() Iterator {
-	return &ItemIterator{scraper: s}
+	return err
 }
 
 // https://github.com/PuerkitoBio/goquery/wiki/Tips-and-tricks
@@ -209,7 +188,6 @@ func parseItem(s *goquery.Selection) (item *types.CraigslistItem, err error) {
 	if s.Length() != 1 {
 		return nil, fmt.Errorf("WARN - result row has %d children (only 1 expected)", s.Length())
 	}
-	//resultRowNode := s.Get(0)
 	item = new(types.CraigslistItem)
 
 	//for _, attr := range resultRowNode.Attr {
