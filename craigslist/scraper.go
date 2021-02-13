@@ -210,7 +210,10 @@ func parseItem(s *goquery.Selection) (item *types.CraigslistItem, err error) {
 	}
 
 	item.Title = resultInfo.Find(".result-heading .result-title").Text()
-	item.Price, err = strconv.Atoi(resultInfo.Find(".result-meta .result-price").Text())
+	priceString := strings.TrimPrefix(resultInfo.Find(".result-meta .result-price").Text(), "$")
+	item.Price, err = strconv.Atoi(priceString)
+	// Convert to cents
+	item.Price *= 100
 
 	return item, nil
 }

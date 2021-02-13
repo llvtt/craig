@@ -54,13 +54,12 @@ func TestParseItems(t *testing.T) {
 	assertions.Equal(14, resultCount, results)
 
 	included := &types.CraigslistItem{
-		Url:          "https://sfbay.craigslist.org/sfc/bik/d/san-francisco-stolen-bionx-jamis-dakar/7274129390.html",
-		Title:        "STOLEN: BionX Jamis Dakar Dragon 29er electric mountain bike",
-		Description:  "",
-		ThumbnailUrl: "",
-		IndexDate:    time.Time{},
-		PublishDate:  time.Date(2021, 2, 7, 13, 21, 0, 0, time.UTC),
-		Price:        0,
+		Url:         "https://sfbay.craigslist.org/sfc/bik/d/san-francisco-stolen-bionx-jamis-dakar/7274129390.html",
+		Title:       "STOLEN: BionX Jamis Dakar Dragon 29er electric mountain bike",
+		Description: "",
+		IndexDate:   time.Time{},
+		PublishDate: time.Date(2021, 2, 7, 13, 21, 0, 0, time.UTC),
+		Price:       100,
 	}
 	assertions.Equal(included, results[0])
 }

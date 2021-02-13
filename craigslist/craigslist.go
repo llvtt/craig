@@ -75,13 +75,12 @@ func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.Craigslist
 	}
 
 	return &types.CraigslistItem{
-		Url:          item.Link,
-		Title:        html.UnescapeString(item.Title),
-		Description:  html.UnescapeString(item.Description),
-		ThumbnailUrl: extractThumbnail(item),
-		IndexDate:    time.Now(),
-		PublishDate:  publishDate,
-		Price:        price,
+		Url:         item.Link,
+		Title:       html.UnescapeString(item.Title),
+		Description: html.UnescapeString(item.Description),
+		IndexDate:   time.Now(),
+		PublishDate: publishDate,
+		Price:       price,
 	}, nil
 }
 
@@ -202,4 +201,3 @@ func (c *client) optionsToParams(p params) params {
 	}
 	return p
 }
-

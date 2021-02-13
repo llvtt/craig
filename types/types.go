@@ -19,13 +19,12 @@ type CraigConfig struct {
 }
 
 type CraigslistItem struct {
-	Url          string    `json:"url" dynamodbav:"url"`
-	Title        string    `json:"title" dynamodbav:"title"`
-	Description  string    `json:"description" dynamodbav:"description"`
-	ThumbnailUrl string    `json:"thumbnail_url" dynamodbav:"thumbnail_url"`
-	IndexDate    time.Time `json:"index_date" dynamodbav:"index_date"`
-	PublishDate  time.Time `json:"publish_date" dynamodbav:"publish_date"`
-	Price        int       `json:"price" dynamodbav:"price"`
+	Url         string    `json:"url" dynamodbav:"url"`
+	Title       string    `json:"title" dynamodbav:"title"`
+	Description string    `json:"description" dynamodbav:"description"`
+	IndexDate   time.Time `json:"index_date" dynamodbav:"index_date"`
+	PublishDate time.Time `json:"publish_date" dynamodbav:"publish_date"`
+	Price       int       `json:"price" dynamodbav:"price"`
 }
 
 type CraigslistPriceLogGet struct {
