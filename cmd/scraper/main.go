@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/llvtt/craig/craigslist"
 	"github.com/llvtt/craig/db"
-	"github.com/llvtt/craig/slack"
 	"log"
 )
 
@@ -17,7 +16,6 @@ func main() {
 	manager := db.NewDynamoDBAccessManager(dynamodb.New(sess))
 	indexer := craigslist.NewDynamoDBIndexer(manager.Table("items"))
 	scraper := craigslist.NewScraper()
-	slacker := slack.NewSlacker()
 	newItemCount := 0
 	for item, err := scraper.Next(); err == nil; item, err = scraper.Next() {
 		if newItem, err := indexer.Index(ctx, item); err != nil {
