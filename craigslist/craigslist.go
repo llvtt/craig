@@ -75,36 +75,40 @@ func (c *client) CraigslistItemFromRssItem(item *gofeed.Item) (*types.Craigslist
 	}
 
 	return &types.CraigslistItem{
-		Url:          item.Link,
-		Title:        html.UnescapeString(item.Title),
-		Description:  html.UnescapeString(item.Description),
-		ThumbnailUrl: extractThumbnail(item),
-		IndexDate:    time.Now(),
-		PublishDate:  publishDate,
-		Price:        price,
+		Url:         item.Link,
+		Title:       html.UnescapeString(item.Title),
+		Description: html.UnescapeString(item.Description),
+		IndexDate:   time.Now(),
+		PublishDate: publishDate,
+		Price:       price,
 	}, nil
 }
 
 func (c *client) Search(searchTerm string) (Listing, error) {
-	query := strings.Replace(searchTerm, " ", "+", -1)
-	resultsFound := 1
+	//query := strings.Replace(searchTerm, " ", "+", -1)
+	//resultsFound := 1
 	var results Listing
-	for startItem := 0; resultsFound > 0; startItem += resultsFound {
-		feed, err := c.get("/search", params{param{"query", query}, param{"s", strconv.Itoa(startItem)}})
-		if err != nil {
-			return nil, utils.WrapError("Could not execute craigslist search request. ", err)
-		}
-		for _, item := range feed.Items {
-			rssItem, err := c.CraigslistItemFromRssItem(item)
-			if err != nil {
-				// skip the item, don't fail the whole request
-				level.Error(c.logger).Log(fmt.Sprintf("Could not convert rss item into craigslist item. Item was %v", item), err)
-			}
-			results = append(results, rssItem)
-			startItem += 1
-		}
-		resultsFound = len(feed.Items)
-	}
+	//for startItem := 0; resultsFound > 0; startItem += resultsFound {
+	//	feed, err := c.get("/search", params{param{"query", query}, param{"s", strconv.Itoa(startItem)}})
+	//	if err != nil {
+	//		return nil, utils.WrapError("Could not execute craigslist search request. ", err)
+	//	}
+	//	for _, item := range feed.Items {
+	//		//rssItem, err := c.CraigslistItemFromRssItem(item)
+	//		rssItem := &types.CraigslistItem{Url: "foo.bar", Price: 200, PublishDate: time.Now(), Description: "dummy"}
+	//		if err != nil {
+	//			// skip the item, don't fail the whole request
+	//			level.Error(c.logger).Log(fmt.Sprintf("Could not convert rss item into craigslist item. Item was %v", item), err)
+	//		}
+	//		results = append(results, rssItem)
+	//		startItem += 1
+	//	}
+	//	resultsFound = len(feed.Items)
+	//}
+
+	// TODO rewrite the craigslist scraper into an html scraper instead of rss feed
+	// this is just a dummy item to test other e2e flows
+	results = []*types.CraigslistItem{{Url: "https://sacramento.craigslist.org/atq/d/represa-handel-signed-lamp-base/7261024429.html", Price: 550000, PublishDate: time.Now(), Description: "dummy"}}
 	return results, nil
 }
 
@@ -166,7 +170,7 @@ func (c *client) getPrice(item *gofeed.Item) (int, error) {
 
 func (c *client) buildUrl(path string, p params) string {
 	return fmt.Sprintf(
-		"http://%s.craigslist.org%s%s%s%s",
+		"https://%s.craigslist.org%s%s%s%s",
 		c.region,
 		path,
 		prependSlash(c.options.SubRegion),
@@ -197,4 +201,3 @@ func (c *client) optionsToParams(p params) params {
 	}
 	return p
 }
-

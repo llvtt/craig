@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"github.com/llvtt/craig/internal/util"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -15,19 +16,23 @@ type DynamoDBAccess struct {
 	Client    *dynamodb.DynamoDB
 }
 
+type DataAccessManager interface {
+	Table(string) DataAccess
+}
+
 type DynamoDBAccessManager struct {
 	client *dynamodb.DynamoDB
 }
 
-func NewDynamoDBAccessManager(client *dynamodb.DynamoDB) *DynamoDBAccessManager {
+func NewDynamoDBAccessManager(client *dynamodb.DynamoDB) DataAccessManager {
 	return &DynamoDBAccessManager{client}
 }
 
-func (mgr *DynamoDBAccessManager) Table(tableName string) *DynamoDBAccess {
+func (mgr *DynamoDBAccessManager) Table(tableName string) DataAccess {
 	return &DynamoDBAccess{tableName, mgr.client}
 }
 
-func (acc *DynamoDBAccess) List(ctx context.Context) (it Iterator, err error) {
+func (acc *DynamoDBAccess) List(ctx context.Context) (it util.Iterator, err error) {
 	input := &dynamodb.ScanInput{TableName: aws.String(acc.TableName)}
 
 	var docs []map[string]*dynamodb.AttributeValue
@@ -37,6 +42,29 @@ func (acc *DynamoDBAccess) List(ctx context.Context) (it Iterator, err error) {
 		return !lastPage
 	})
 	it = &DynamoAccessIterator{scannedItems: docs}
+
+	return
+}
+
+func (acc *DynamoDBAccess) Get(ctx context.Context, input interface{}, record interface{}) (err error) {
+	item, err := dynamodbattribute.MarshalMap(input)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(fmt.Sprintf("getting item %v\n", item))
+	output, err := acc.Client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
+		TableName:    aws.String(acc.TableName),
+		Key: item,
+	})
+
+	if err != nil || output.Item == nil {
+		return err
+	}
+
+	if err = dynamodbattribute.UnmarshalMap(output.Item, record); err != nil {
+		return err
+	}
 
 	return
 }
@@ -83,7 +111,7 @@ type DynamoAccessIterator struct {
 
 func (it *DynamoAccessIterator) Next(out interface{}) (err error) {
 	if it.position >= len(it.scannedItems) {
-		err = IteratorExhausted
+		err = util.IteratorExhausted
 	}
 
 	if it.position < len(it.scannedItems) {

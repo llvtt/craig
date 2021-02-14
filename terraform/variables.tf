@@ -7,10 +7,6 @@ variable "image_uri" {
   description = "URI for the image in ECR to deploy to lambda"
 }
 
-variable "tag_name" {
-  description = "The docker image tag"
-}
-
 variable "slack_access_token" {
   description = "Slack API token"
 }
